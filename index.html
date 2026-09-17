@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#5B54D6">
+  <title>Cilly Log</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<section class="page" id="auth-panel" hidden aria-label="Sign in">
+  <div class="panel">
+    <div class="page-head">
+      <span class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/><path d="M10 20v-6h4v6"/></svg>
+      </span>
+      <div class="head-text">
+        <h1>Cilly Log</h1>
+        <p class="tagline">Sign in to see the log.</p>
+      </div>
+    </div>
+    <form id="auth-form">
+      <div class="field">
+        <label for="auth-email">Email</label>
+        <input type="email" id="auth-email" autocomplete="email" placeholder="you@example.com">
+      </div>
+      <p class="form-hint" id="auth-hint">We&rsquo;ll email you a sign-in link. No password needed.</p>
+      <p class="form-error" id="auth-error" hidden></p>
+      <div class="form-actions">
+        <button type="submit" class="btn primary" id="auth-submit">Email me a link</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<div class="page" id="app" data-view="home">
+
+  <div class="notice" id="app-notice" hidden></div>
+
+  <!-- ================= HOME ================= -->
+  <section class="view view-home" aria-label="Home">
+    <header class="page-head">
+      <span class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/><path d="M10 20v-6h4v6"/></svg>
+      </span>
+      <div class="head-text">
+        <h1>Cilly Log</h1>
+        <p class="tagline">Sleep, milk and solids, one tap at a time.</p>
+      </div>
+      <button class="head-btn" type="button" id="settings-btn" aria-label="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+      <button class="head-btn" type="button" data-refresh aria-label="Refresh">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>
+      </button>
+    </header>
+
+    <nav class="nav-list" aria-label="Sections">
+      <button class="nav-tile" type="button" data-nav="sleep">
+        <span class="nav-icon" data-type="sleep">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z" fill="currentColor"/></svg>
+        </span>
+        <span class="nav-text">
+          <span class="nav-title">Sleep</span>
+          <span class="nav-sub" id="home-sleep-sub">Nothing logged today</span>
+        </span>
+        <span class="nav-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M9 5l7 7-7 7"/></svg></span>
+      </button>
+      <button class="nav-tile" type="button" data-nav="milk">
+        <span class="nav-icon" data-type="milk">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M10 2.5h4v2.5h-4z"/><path d="M9 5h6l1.5 3h-9z"/><path d="M8 8h8v10.5A2.5 2.5 0 0 1 13.5 21h-3A2.5 2.5 0 0 1 8 18.5z"/><path d="M8 12h8M8 15.5h8"/></svg>
+        </span>
+        <span class="nav-text">
+          <span class="nav-title">Milk</span>
+          <span class="nav-sub" id="home-milk-sub">No feeds logged today</span>
+        </span>
+        <span class="nav-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M9 5l7 7-7 7"/></svg></span>
+      </button>
+      <button class="nav-tile" type="button" data-nav="solids">
+        <span class="nav-icon" data-type="solids">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M3 11h18a9 9 0 0 1-18 0z"/><path d="M8 11c0-3 1.6-5 4-5s4 2 4 5"/><path d="M6 20h12"/></svg>
+        </span>
+        <span class="nav-text">
+          <span class="nav-title">Solids</span>
+          <span class="nav-sub" id="home-solids-sub">No solids logged today</span>
+        </span>
+        <span class="nav-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M9 5l7 7-7 7"/></svg></span>
+      </button>
+    </nav>
+
+    <section class="panel writer-only" id="settings-panel" hidden>
+      <h2>Settings</h2>
+      <form id="settings-form">
+        <div class="field">
+          <label for="set-dob">Date of birth</label>
+          <input type="date" id="set-dob">
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="set-night-start">Night starts</label>
+            <input type="time" id="set-night-start">
+          </div>
+          <div class="field">
+            <label for="set-night-end">Night ends</label>
+            <input type="time" id="set-night-end">
+          </div>
+        </div>
+        <p class="form-hint">A sleep that starts between these times counts as night sleep. The date of birth sets the nap window.</p>
+        <p class="form-error" id="set-error" hidden></p>
+        <div class="form-actions">
+          <button type="button" class="btn danger" id="sign-out" hidden>Sign out</button>
+          <button type="button" class="btn ghost" id="set-cancel">Cancel</button>
+          <button type="submit" class="btn primary">Save</button>
+        </div>
+      </form>
+    </section>
+
+    <div class="log-toolbar">
+      <h2>Everything</h2>
+      <span class="chart-range" id="home-log-count"></span>
+    </div>
+    <section class="log" id="home-log"></section>
+
+    <footer class="foot">
+      <p>Times are recorded on this device's local clock.</p>
+    </footer>
+  </section>
+
+  <!-- ================= SLEEP ================= -->
+  <section class="view view-sleep" aria-label="Sleep">
+    <header class="page-head">
+      <button class="head-btn" type="button" data-nav="home" aria-label="Back to home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <span class="nav-icon head-icon" data-type="sleep">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z" fill="currentColor"/></svg>
+      </span>
+      <div class="head-text">
+        <h1>Sleep</h1>
+        <p class="tagline">Naps and nights.</p>
+      </div>
+      <button class="head-btn" type="button" data-refresh aria-label="Refresh">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>
+      </button>
+    </header>
+
+    <section class="status-card" id="status-card" data-asleep="false">
+      <div class="status-glow" aria-hidden="true"></div>
+      <button class="status-btn" id="toggle-btn" type="button">
+        <span class="status-icon">
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z" fill="currentColor"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><g stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.5 5.5l-2.1 2.1M7.6 16.4l-2.1 2.1M18.5 18.5l-2.1-2.1M7.6 7.6 5.5 5.5"/></g></svg>
+        </span>
+        <span class="status-text">
+          <span class="status-label" id="status-label">Awake</span>
+          <span class="status-sub" id="status-sub">Tap when they fall asleep</span>
+          <span class="status-note" id="status-note" hidden></span>
+        </span>
+        <span class="status-timer" id="status-timer" hidden></span>
+      </button>
+    </section>
+
+    <section class="wake-card" id="wake-card" hidden>
+      <div class="wake-row">
+        <div class="wake-block">
+          <span class="wake-label">Awake</span>
+          <span class="wake-value" id="wake-timer">0m</span>
+          <span class="wake-sub" id="wake-since"></span>
+        </div>
+        <div class="wake-block">
+          <span class="wake-label">Usual nap window</span>
+          <span class="wake-value" id="wake-window">&mdash;</span>
+          <span class="wake-state" id="wake-state"></span>
+        </div>
+      </div>
+      <p class="wake-foot" id="wake-foot"></p>
+    </section>
+
+    <section class="stats-row" aria-label="Sleep totals">
+      <div class="stat-tile">
+        <span class="stat-value" id="stat-total">0m</span>
+        <span class="stat-label" id="stat-total-label">Naps today</span>
+      </div>
+      <div class="stat-tile">
+        <span class="stat-value" id="stat-night">&mdash;</span>
+        <span class="stat-label" id="stat-night-label">Last night</span>
+      </div>
+    </section>
+
+    <section class="panel" aria-label="Sleep trend">
+      <div class="panel-head">
+        <h2>Sleep trend</h2>
+        <span class="chart-range">Last 14 days</span>
+      </div>
+      <div class="chart-legend"><span><i class="legend-swatch"></i>Night</span><span><i class="legend-swatch naps"></i>Naps</span></div>
+      <div class="chart-wrap" id="chart-wrap"></div>
+    </section>
+
+    <section class="panel" aria-label="Time to settle">
+      <div class="panel-head">
+        <h2>Time to settle</h2>
+        <span class="chart-range">Daily average, last 14 days</span>
+      </div>
+      <div class="chart-wrap" id="settle-wrap"></div>
+    </section>
+
+    <section class="panel writer-only" id="form-panel" hidden>
+      <h2 id="form-title">Log a sleep session</h2>
+      <form id="entry-form">
+        <input type="hidden" id="entry-id" value="">
+        <div class="field" id="field-date">
+          <label for="f-date">Date</label>
+          <input type="date" id="f-date">
+        </div>
+        <div class="row">
+          <div class="field" id="field-putdown">
+            <label for="f-putdown">Put down at</label>
+            <input type="time" id="f-putdown">
+          </div>
+          <div class="field">
+            <label for="f-start">Asleep at</label>
+            <input type="time" id="f-start">
+          </div>
+        </div>
+        <div class="chips" id="chips-start" data-target="f-start" hidden>
+          <span class="chips-label">Asleep</span>
+          <button type="button" class="chip" data-minutes="0">Now</button>
+          <button type="button" class="chip" data-minutes="5">5m ago</button>
+          <button type="button" class="chip" data-minutes="10">10m ago</button>
+          <button type="button" class="chip" data-minutes="20">20m ago</button>
+          <button type="button" class="chip" data-minutes="30">30m ago</button>
+        </div>
+        <div class="chips" id="chips-putdown" hidden>
+          <span class="chips-label">Put down</span>
+          <button type="button" class="chip" data-before="0">Same time</button>
+          <button type="button" class="chip" data-before="5">5m before</button>
+          <button type="button" class="chip" data-before="10">10m before</button>
+          <button type="button" class="chip" data-before="15">15m before</button>
+          <button type="button" class="chip" data-before="20">20m before</button>
+          <button type="button" class="chip" data-before="30">30m before</button>
+        </div>
+        <div class="field" id="field-end">
+          <label for="f-end">Woke at</label>
+          <input type="time" id="f-end">
+        </div>
+        <div class="chips" id="chips-end" data-target="f-end" hidden>
+          <span class="chips-label">Woke</span>
+          <button type="button" class="chip" data-minutes="0">Now</button>
+          <button type="button" class="chip" data-minutes="5">5m ago</button>
+          <button type="button" class="chip" data-minutes="10">10m ago</button>
+          <button type="button" class="chip" data-minutes="20">20m ago</button>
+          <button type="button" class="chip" data-minutes="30">30m ago</button>
+        </div>
+        <div class="field" id="field-settle">
+          <label for="f-settle">How did settling go?</label>
+          <textarea id="f-settle" rows="2" placeholder="Rocked for 10 min, went down easy, fussy from teething..."></textarea>
+        </div>
+        <div class="field" id="field-wake">
+          <label for="f-wake">How did waking go?</label>
+          <textarea id="f-wake" rows="2" placeholder="Woke happy, needed a cuddle, hungry straight away..."></textarea>
+        </div>
+        <p class="form-error" id="form-error" hidden></p>
+        <div class="form-actions">
+          <button type="button" class="btn danger" id="f-danger" hidden>Delete</button>
+          <button type="button" class="btn ghost" id="f-cancel">Cancel</button>
+          <button type="submit" class="btn primary" id="f-submit">Save</button>
+        </div>
+      </form>
+    </section>
+
+    <div class="log-toolbar">
+      <h2>Sleep log</h2>
+      <button class="btn small writer-only" id="add-btn" type="button">+ Log manually</button>
+    </div>
+    <section class="log" id="log-list"></section>
+  </section>
+
+  <!-- ================= MILK ================= -->
+  <section class="view view-milk" aria-label="Milk feeds">
+    <header class="page-head">
+      <button class="head-btn" type="button" data-nav="home" aria-label="Back to home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <span class="nav-icon head-icon" data-type="milk">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M10 2.5h4v2.5h-4z"/><path d="M9 5h6l1.5 3h-9z"/><path d="M8 8h8v10.5A2.5 2.5 0 0 1 13.5 21h-3A2.5 2.5 0 0 1 8 18.5z"/><path d="M8 12h8M8 15.5h8"/></svg>
+      </span>
+      <div class="head-text">
+        <h1>Milk</h1>
+        <p class="tagline">Bottles and feeds, in millilitres.</p>
+      </div>
+      <button class="head-btn" type="button" data-refresh aria-label="Refresh">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>
+      </button>
+    </header>
+
+    <section class="panel writer-only">
+      <h2 id="m-title">Log a feed</h2>
+      <form id="milk-form">
+        <input type="hidden" id="m-id" value="">
+        <div class="row">
+          <div class="field">
+            <label for="m-date">Date</label>
+            <input type="date" id="m-date">
+          </div>
+          <div class="field">
+            <label for="m-time">Time</label>
+            <input type="time" id="m-time">
+          </div>
+        </div>
+        <div class="chips" data-target="m-time">
+          <button type="button" class="chip" data-minutes="0">Now</button>
+          <button type="button" class="chip" data-minutes="5">5m ago</button>
+          <button type="button" class="chip" data-minutes="10">10m ago</button>
+          <button type="button" class="chip" data-minutes="20">20m ago</button>
+          <button type="button" class="chip" data-minutes="30">30m ago</button>
+        </div>
+        <div class="field">
+          <label for="m-amount">Amount (ml) &middot; optional</label>
+          <input type="number" id="m-amount" min="0" step="5" inputmode="decimal" placeholder="120">
+        </div>
+        <div class="chips" data-target="m-amount">
+          <button type="button" class="chip" data-ml="60">60 ml</button>
+          <button type="button" class="chip" data-ml="90">90 ml</button>
+          <button type="button" class="chip" data-ml="120">120 ml</button>
+          <button type="button" class="chip" data-ml="150">150 ml</button>
+          <button type="button" class="chip" data-ml="180">180 ml</button>
+          <button type="button" class="chip" data-ml="210">210 ml</button>
+          <button type="button" class="chip" data-ml="240">240 ml</button>
+        </div>
+        <div class="field">
+          <label for="m-notes">Notes</label>
+          <textarea id="m-notes" rows="2" placeholder="Took it all, spat up a little, dozed off halfway..."></textarea>
+        </div>
+        <p class="form-error" id="m-error" hidden></p>
+        <div class="form-actions">
+          <button type="button" class="btn danger" id="m-delete" hidden>Delete</button>
+          <button type="button" class="btn ghost" id="m-cancel" hidden>Cancel</button>
+          <button type="submit" class="btn primary" id="m-submit">Add feed</button>
+        </div>
+      </form>
+    </section>
+
+    <div class="log-toolbar">
+      <h2>Feed log</h2>
+    </div>
+    <section class="log" id="milk-log"></section>
+  </section>
+
+  <!-- ================= SOLIDS ================= -->
+  <section class="view view-solids" aria-label="Solids">
+    <header class="page-head">
+      <button class="head-btn" type="button" data-nav="home" aria-label="Back to home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <span class="nav-icon head-icon" data-type="solids">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M3 11h18a9 9 0 0 1-18 0z"/><path d="M8 11c0-3 1.6-5 4-5s4 2 4 5"/><path d="M6 20h12"/></svg>
+      </span>
+      <div class="head-text">
+        <h1>Solids</h1>
+        <p class="tagline">Meals, tastes and first foods.</p>
+      </div>
+      <button class="head-btn" type="button" data-refresh aria-label="Refresh">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>
+      </button>
+    </header>
+
+    <section class="panel writer-only">
+      <h2 id="s-title">Log a meal</h2>
+      <form id="solid-form">
+        <input type="hidden" id="s-id" value="">
+        <div class="row">
+          <div class="field">
+            <label for="s-date">Date</label>
+            <input type="date" id="s-date">
+          </div>
+          <div class="field">
+            <label for="s-time">Time</label>
+            <input type="time" id="s-time">
+          </div>
+        </div>
+        <div class="chips" data-target="s-time">
+          <button type="button" class="chip" data-minutes="0">Now</button>
+          <button type="button" class="chip" data-minutes="5">5m ago</button>
+          <button type="button" class="chip" data-minutes="10">10m ago</button>
+          <button type="button" class="chip" data-minutes="20">20m ago</button>
+          <button type="button" class="chip" data-minutes="30">30m ago</button>
+        </div>
+        <div class="field">
+          <label for="s-food">Foods</label>
+          <div class="tags" id="s-tags"></div>
+          <div class="row">
+            <input type="text" id="s-food" list="food-suggestions" autocomplete="off" placeholder="Banana, porridge, avocado...">
+            <button type="button" class="btn small" id="s-add-food">Add</button>
+          </div>
+          <datalist id="food-suggestions"></datalist>
+          <div class="chips" id="s-recent"></div>
+        </div>
+        <div class="field">
+          <label for="s-notes">Notes</label>
+          <textarea id="s-notes" rows="2" placeholder="Loved it, gagged on lumps, only a few spoons..."></textarea>
+        </div>
+        <p class="form-error" id="s-error" hidden></p>
+        <div class="form-actions">
+          <button type="button" class="btn danger" id="s-delete" hidden>Delete</button>
+          <button type="button" class="btn ghost" id="s-cancel" hidden>Cancel</button>
+          <button type="submit" class="btn primary" id="s-submit">Add meal</button>
+        </div>
+      </form>
+    </section>
+
+    <div class="log-toolbar">
+      <h2>Solids log</h2>
+    </div>
+    <section class="log" id="solids-log"></section>
+  </section>
+
+</div>
+
+<div class="toast" id="toast" hidden></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/store.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

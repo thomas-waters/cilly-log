@@ -1,0 +1,17 @@
+# Private data and secrets never go in the repo
+local/
+.env
+.env.*
+
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors and assistant config
+.vscode/
+.idea/
+.claude/
+
+# Future tooling
+node_modules/
