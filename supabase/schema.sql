@@ -89,8 +89,19 @@ drop policy if exists "family only" on public.app_state;
 create policy "family only" on public.app_state
   for all to authenticated using (public.is_family()) with check (public.is_family());
 
--- Live updates between phones.
-alter publication supabase_realtime add table public.sleeps, public.feeds, public.solids, public.app_state;
+-- Live updates between phones (skips tables already in the publication).
+do $$
+declare t text;
+begin
+  foreach t in array array['sleeps', 'feeds', 'solids', 'app_state'] loop
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
+    ) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+  end loop;
+end $$;
 
 -- Who may sign in (lowercase emails). Run one insert per parent in the SQL editor:
 --   insert into public.allowed_users (email) values ('name@example.com') on conflict (email) do nothing;
