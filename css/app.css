@@ -601,6 +601,7 @@
     font-size:1.25rem;
     font-weight:600;
   }
+  .summary-days{ opacity:.75; }
   .summary-delta{ font-size:0.75rem; color:var(--ink-soft); }
   .summary-delta[data-dir="up"]{ color:var(--accent); }
   .summary-delta[data-dir="down"]{ color:var(--warn); }
