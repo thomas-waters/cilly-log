@@ -22,7 +22,8 @@ create table if not exists public.feeds (
   id         text primary key,
   date       date not null,
   time       text not null,
-  amount_ml  numeric,
+  kind       text,            -- 'breast' or 'bottle'
+  amount_ml  numeric,         -- bottles only; always stored in millilitres
   notes      text not null default '',
   created_by text,
   updated_at timestamptz not null default now()

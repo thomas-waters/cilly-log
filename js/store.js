@@ -13,7 +13,7 @@
   function emptyState(){
     return {
       status: { asleep: false, since: null, settleNotes: '', putDown: '' },
-      settings: { dob: '', nightStart: '19:00', nightEnd: '06:00' },
+      settings: { dob: '', nightStart: '19:00', nightEnd: '06:00', milkUnit: 'ml' },
       entries: [],
       feeds: [],
       solids: [],
@@ -90,11 +90,16 @@
         created_by: e.createdBy || null };
     }
     function rowToFeed(r){
-      return { id: r.id, date: r.date, time: r.time, amountMl: r.amount_ml == null ? null : Number(r.amount_ml),
-        notes: r.notes || '', createdBy: r.created_by || '' };
+      var amount = r.amount_ml == null ? null : Number(r.amount_ml);
+      return { id: r.id, date: r.date, time: r.time,
+        // Rows logged before bottles and breast feeds were told apart: an
+        // amount meant a bottle.
+        kind: r.kind || (amount ? 'bottle' : 'breast'),
+        amountMl: amount, notes: r.notes || '', createdBy: r.created_by || '' };
     }
     function feedToRow(f){
-      return { id: f.id, date: f.date, time: f.time, amount_ml: f.amountMl == null ? null : f.amountMl,
+      return { id: f.id, date: f.date, time: f.time, kind: f.kind || 'breast',
+        amount_ml: f.amountMl == null ? null : f.amountMl,
         notes: f.notes || '', created_by: f.createdBy || null };
     }
     function rowToSolid(r){
@@ -159,11 +164,14 @@
           if (!op.record.createdBy) op.record.createdBy = me;
           var row = TO_ROW[op.collection](op.record);
           res = await client.from(TABLE[op.collection]).upsert(row);
-          // Databases that predate the created_by column still accept the
-          // entry; it just won't say who logged it.
-          if (res.error && isMissingColumn(res.error, 'created_by')){
-            delete row.created_by;
-            res = await client.from(TABLE[op.collection]).upsert(row);
+          // A database that predates a column still accepts the entry; it
+          // just stores less about it.
+          var optional = ['created_by', 'kind'];
+          for (var c = 0; c < optional.length; c++){
+            if (res.error && isMissingColumn(res.error, optional[c])){
+              delete row[optional[c]];
+              res = await client.from(TABLE[op.collection]).upsert(row);
+            }
           }
         }
         else if (op.type === 'delete') res = await client.from(TABLE[op.collection]).delete().eq('id', op.id);

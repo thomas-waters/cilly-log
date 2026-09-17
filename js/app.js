@@ -270,6 +270,7 @@
       entry.open = !el('form-panel').hidden;
     }
     if (formId === 'solid-form') entry.foods = solidDraftFoods.slice();
+    if (formId === 'milk-form') entry.bottle = el('m-bottle').checked;
     draft[formId] = entry;
     draft.at = Date.now();
     ssSet(DRAFT_KEY, draft);
@@ -314,6 +315,8 @@
       var milkId = m.fields['m-id'];
       if (!milkId || editMilk(milkId, true)){
         setFields(m.fields);
+        el('m-bottle').checked = !!m.bottle;
+        setBottleFields();
         snapshotForm('milk-form');
       }
     }
@@ -394,7 +397,7 @@
     var set = {};
     keys.forEach(function(k){ set[k] = true; });
     var longestNightMs = 0;
-    var sleepByDay = {}, mlByDay = {}, mealsByDay = {};
+    var sleepByDay = {}, feedsByDay = {}, mealsByDay = {};
 
     state.entries.forEach(function(e){
       var key = sleepDayKey(e);
@@ -405,18 +408,18 @@
     });
     state.feeds.forEach(function(f){
       if (!set[f.date]) return;
-      mlByDay[f.date] = (mlByDay[f.date] || 0) + Number(f.amountMl || 0);
+      feedsByDay[f.date] = (feedsByDay[f.date] || 0) + 1;
     });
     state.solids.forEach(function(s){
       if (!set[s.date]) return;
       mealsByDay[s.date] = (mealsByDay[s.date] || 0) + 1;
     });
 
-    var sleep = averageOver(sleepByDay), milk = averageOver(mlByDay), meals = averageOver(mealsByDay);
+    var sleep = averageOver(sleepByDay), milk = averageOver(feedsByDay), meals = averageOver(mealsByDay);
     return {
       days: keys.length,
       sleepPerDayMs: sleep.avg, sleepDays: sleep.days,
-      mlPerDay: milk.avg, milkDays: milk.days,
+      feedsPerDay: milk.avg, milkDays: milk.days,
       mealsPerDay: meals.avg, mealsDays: meals.days,
       longestNightMs: longestNightMs
     };
@@ -447,36 +450,36 @@
   function renderSummary(){
     var thisWeek = statsFor(dayKeysEndingToday(0, 7));
     var lastWeek = statsFor(dayKeysEndingToday(1, 7));
-    var ml = function(v){ return Math.round(v) + ' ml'; };
-    var meals = function(v){ return (Math.round(v * 10) / 10) + ' a day'; };
+    var perDay = function(v){ return (Math.round(v * 10) / 10) + ' a day'; };
+    var meals = perDay;
 
     el('summary-grid').innerHTML =
       summaryTile('Sleep a day', thisWeek.sleepPerDayMs ? fmtDur(thisWeek.sleepPerDayMs) : '—', thisWeek.sleepPerDayMs, lastWeek.sleepPerDayMs, fmtDur, thisWeek.sleepDays) +
       summaryTile('Longest night stretch', thisWeek.longestNightMs ? fmtDur(thisWeek.longestNightMs) : '—', thisWeek.longestNightMs, lastWeek.longestNightMs, fmtDur) +
-      summaryTile('Milk a day', thisWeek.mlPerDay ? ml(thisWeek.mlPerDay) : '—', thisWeek.mlPerDay, lastWeek.mlPerDay, ml, thisWeek.milkDays) +
+      summaryTile('Feeds a day', thisWeek.feedsPerDay ? Math.round(thisWeek.feedsPerDay * 10) / 10 : '—', thisWeek.feedsPerDay, lastWeek.feedsPerDay, perDay, thisWeek.milkDays) +
       summaryTile('Meals a day', thisWeek.mealsPerDay ? Math.round(thisWeek.mealsPerDay * 10) / 10 : '—', thisWeek.mealsPerDay, lastWeek.mealsPerDay, meals, thisWeek.mealsDays);
 
     renderDayTable();
     el('print-heading').textContent = 'Cilly Log — 7 days to ' +
       new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-    var sub = fmtDur(thisWeek.sleepPerDayMs) + ' sleep a day this week';
-    if (thisWeek.mlPerDay) sub += ' · ' + ml(thisWeek.mlPerDay);
+    var sub = thisWeek.sleepPerDayMs ? fmtDur(thisWeek.sleepPerDayMs) + ' sleep a day this week' : 'Nothing logged this week';
+    if (thisWeek.feedsPerDay) sub += ' · ' + perDay(thisWeek.feedsPerDay) + ' feeds';
     el('home-summary-sub').textContent = sub;
   }
 
   function renderDayTable(){
     var keys = dayKeysEndingToday(0, 7).slice().reverse();
     var rows = keys.map(function(key){
-      var night = 0, naps = 0, ml = 0, meals = 0;
+      var night = 0, naps = 0, feeds = 0, meals = 0;
       state.entries.forEach(function(e){
         if (sleepDayKey(e) !== key) return;
         var dur = entryEnd(e) - entryStart(e);
         if (isNight(e)) night += dur; else naps += dur;
       });
-      state.feeds.forEach(function(f){ if (f.date === key) ml += Number(f.amountMl || 0); });
+      state.feeds.forEach(function(f){ if (f.date === key) feeds++; });
       state.solids.forEach(function(s){ if (s.date === key) meals++; });
-      return { key: key, night: night, naps: naps, ml: ml, meals: meals };
+      return { key: key, night: night, naps: naps, feeds: feeds, meals: meals };
     });
 
     // Each column averages over the days that have a figure in that column.
@@ -492,10 +495,10 @@
       night: columnAverage(function(r){ return r.night; }),
       naps: columnAverage(function(r){ return r.naps; }),
       total: columnAverage(function(r){ return r.night + r.naps; }),
-      ml: columnAverage(function(r){ return r.ml; }),
+      feeds: columnAverage(function(r){ return r.feeds; }),
       meals: columnAverage(function(r){ return r.meals; })
     };
-    var loggedDays = rows.filter(function(r){ return r.night + r.naps + r.ml + r.meals > 0; }).length;
+    var loggedDays = rows.filter(function(r){ return r.night + r.naps + r.feeds + r.meals > 0; }).length;
 
     var body = rows.map(function(r){
       return '<tr>' +
@@ -503,20 +506,20 @@
         '<td>' + (r.night ? fmtDur(r.night) : '—') + '</td>' +
         '<td>' + (r.naps ? fmtDur(r.naps) : '—') + '</td>' +
         '<td>' + ((r.night + r.naps) ? fmtDur(r.night + r.naps) : '—') + '</td>' +
-        '<td>' + (r.ml ? r.ml + ' ml' : '—') + '</td>' +
+        '<td>' + (r.feeds || '—') + '</td>' +
         '<td>' + (r.meals || '—') + '</td>' +
       '</tr>';
     }).join('');
 
     el('day-table').innerHTML =
-      '<thead><tr><th>Day</th><th>Night</th><th>Naps</th><th>Total</th><th>Milk</th><th>Meals</th></tr></thead>' +
+      '<thead><tr><th>Day</th><th>Night</th><th>Naps</th><th>Total</th><th>Feeds</th><th>Meals</th></tr></thead>' +
       '<tbody>' + body + '</tbody>' +
       '<tfoot><tr>' +
         '<td>Average</td>' +
         '<td>' + (avg.night ? fmtDur(avg.night) : '—') + '</td>' +
         '<td>' + (avg.naps ? fmtDur(avg.naps) : '—') + '</td>' +
         '<td>' + (avg.total ? fmtDur(avg.total) : '—') + '</td>' +
-        '<td>' + (avg.ml ? Math.round(avg.ml) + ' ml' : '—') + '</td>' +
+        '<td>' + (avg.feeds ? Math.round(avg.feeds * 10) / 10 : '—') + '</td>' +
         '<td>' + (avg.meals ? Math.round(avg.meals * 10) / 10 : '—') + '</td>' +
       '</tr></tfoot>';
 
@@ -538,7 +541,7 @@
       d.setDate(d.getDate() - (days - 1));
       cutoff = dateKey(d);
     }
-    var rows = [['Type', 'Date', 'Start', 'End', 'Duration (min)', 'Night', 'Minutes to settle', 'Amount (ml)', 'Foods', 'Settling notes', 'Waking notes', 'Notes', 'Logged by']];
+    var rows = [['Type', 'Date', 'Start', 'End', 'Duration (min)', 'Night', 'Minutes to settle', 'Feed', 'Amount (ml)', 'Foods', 'Settling notes', 'Waking notes', 'Notes', 'Logged by']];
 
     state.entries.forEach(function(e){
       if (cutoff && e.date < cutoff) return;
@@ -547,15 +550,18 @@
         Math.round((entryEnd(e) - entryStart(e)) / 60000),
         isNight(e) ? 'yes' : 'no',
         settle === null ? '' : settle,
-        '', '', e.settleNotes || '', e.wakeNotes || '', '', personName(e)]);
+        '', '', '', e.settleNotes || '', e.wakeNotes || '', '', personName(e)]);
     });
     state.feeds.forEach(function(f){
       if (cutoff && f.date < cutoff) return;
-      rows.push(['Milk', f.date, f.time, '', '', '', '', f.amountMl == null ? '' : f.amountMl, '', '', '', f.notes || '', personName(f)]);
+      rows.push(['Milk', f.date, f.time, '', '', '', '',
+        f.kind === 'bottle' ? 'bottle' : 'breast',
+        f.amountMl == null ? '' : Math.round(f.amountMl),
+        '', '', '', f.notes || '', personName(f)]);
     });
     state.solids.forEach(function(s){
       if (cutoff && s.date < cutoff) return;
-      rows.push(['Solids', s.date, s.time, '', '', '', '', '', (s.foods || []).join('; '), '', '', s.notes || '', personName(s)]);
+      rows.push(['Solids', s.date, s.time, '', '', '', '', '', '', (s.foods || []).join('; '), '', '', s.notes || '', personName(s)]);
     });
 
     var header = rows.shift();
@@ -608,6 +614,7 @@
     var liveNote = asleep ? (state.status.settleNotes || '') : '';
     noteEl.textContent = liveNote;
     noteEl.hidden = !liveNote;
+    el('status-edit').hidden = !asleep;
 
     renderSleepStats();
     renderWakeCard();
@@ -872,8 +879,8 @@
     if (isStart){
       danger.hidden = false;
       danger.textContent = 'Cancel sleep';
-      cancel.hidden = true;
-      el('f-submit').textContent = 'Done';
+      cancel.hidden = false;
+      el('f-submit').textContent = 'Save';
     } else if (isWake){
       danger.hidden = false;
       danger.textContent = 'Discard';
@@ -895,10 +902,10 @@
     snapshotForm('entry-form');
   }
 
-  function openStartForm(){
+  function openStartForm(editing){
     formMode = 'start';
     var since = new Date(state.status.since);
-    el('form-title').textContent = 'Just went down';
+    el('form-title').textContent = editing ? 'This sleep' : 'Just went down';
     el('entry-id').value = '';
     el('f-date').value = dateKey(since);
     el('f-putdown').value = state.status.putDown || '';
@@ -975,6 +982,12 @@
     await persist([op]);
   });
 
+  el('status-edit').addEventListener('click', function(ev){
+    ev.stopPropagation();
+    if (readOnly || !state.status.asleep) return;
+    openStartForm(true);
+  });
+
   el('add-btn').addEventListener('click', function(){ openForm(null); });
   el('f-cancel').addEventListener('click', closeForm);
 
@@ -1001,6 +1014,16 @@
     if (!date){ showError('form-error', 'Pick the date this sleep started.', 'f-date'); return; }
     if (!start){ showError('form-error', 'Enter the time they fell asleep.', 'f-start'); return; }
     if (!end){ showError('form-error', 'Enter the time they woke up.', 'f-end'); return; }
+
+    // A wake time earlier in the clock than the asleep time is read as the
+    // next day, which is right for an overnight sleep but wrong for a typo.
+    // Anything beyond 16 hours is the typo.
+    var draft = { date: date, start: start, end: end };
+    var length = entryEnd(draft) - entryStart(draft);
+    if (length > 16 * 3600000){
+      showError('form-error', 'Woke at must be after asleep at. That reads as ' + fmtDur(length) + ' of sleep.', 'f-end');
+      return;
+    }
 
     var entry = {
       id: el('entry-id').value || uid(),
@@ -1033,17 +1056,57 @@
   // ======================================================
   // MILK
   // ======================================================
+  // Bottles are entered in whichever unit suits and always stored in
+  // millilitres, so totals never depend on how they were typed.
+  var ML_PER_OZ = 29.5735;
+  var ML_CHIPS = [60, 90, 120, 150, 180, 210, 240];
+  var OZ_CHIPS = [2, 3, 4, 5, 6, 7, 8];
+
+  function milkUnit(){ return (state.settings || {}).milkUnit === 'oz' ? 'oz' : 'ml'; }
+  function mlToUnit(ml, unit){
+    if (ml == null) return '';
+    return unit === 'oz' ? Math.round((ml / ML_PER_OZ) * 10) / 10 : Math.round(ml);
+  }
+  function unitToMl(value, unit){
+    var n = Number(value);
+    if (!(n > 0)) return null;
+    return unit === 'oz' ? Math.round(n * ML_PER_OZ) : Math.round(n);
+  }
+  function fmtAmount(f){
+    if (f.amountMl == null) return '';
+    var unit = milkUnit();
+    return unit === 'oz' ? mlToUnit(f.amountMl, 'oz') + ' fl oz' : Math.round(f.amountMl) + ' ml';
+  }
+
+  function renderUnitControls(){
+    var unit = milkUnit();
+    Array.prototype.forEach.call(el('m-unit').querySelectorAll('.unit-btn'), function(btn){
+      btn.setAttribute('aria-pressed', btn.getAttribute('data-unit') === unit ? 'true' : 'false');
+    });
+    el('m-amount').placeholder = unit === 'oz' ? '4' : '120';
+    el('m-amount-chips').innerHTML = (unit === 'oz' ? OZ_CHIPS : ML_CHIPS).map(function(v){
+      return '<button type="button" class="chip" data-amount="' + v + '">' + v + (unit === 'oz' ? ' oz' : ' ml') + '</button>';
+    }).join('');
+  }
+
+  function setBottleFields(){
+    el('m-bottle-fields').hidden = !el('m-bottle').checked;
+  }
+
   function resetMilkForm(){
     var now = new Date();
     el('m-id').value = '';
     el('m-date').value = dateKey(now);
     el('m-time').value = timeValue(now);
+    el('m-bottle').checked = false;
     el('m-amount').value = '';
     el('m-notes').value = '';
     el('m-title').textContent = 'Log a feed';
     el('m-submit').textContent = 'Add feed';
     el('m-delete').hidden = true;
     el('m-cancel').hidden = true;
+    setBottleFields();
+    renderUnitControls();
     hideError('m-error');
     clearDraft('milk-form');
   }
@@ -1055,22 +1118,30 @@
     el('m-id').value = f.id;
     el('m-date').value = f.date;
     el('m-time').value = f.time;
-    el('m-amount').value = f.amountMl || '';
+    el('m-bottle').checked = f.kind === 'bottle';
+    el('m-amount').value = f.amountMl == null ? '' : mlToUnit(f.amountMl, milkUnit());
     el('m-notes').value = f.notes || '';
     el('m-title').textContent = 'Edit feed';
     el('m-submit').textContent = 'Save';
     el('m-delete').hidden = false;
     el('m-cancel').hidden = false;
+    setBottleFields();
+    renderUnitControls();
     hideError('m-error');
     snapshotForm('milk-form');
-    if (!quiet) el('m-amount').focus();
+    if (!quiet) el('m-time').focus();
     return true;
+  }
+
+  function feedTitle(f){
+    if (f.kind === 'bottle') return f.amountMl == null ? 'Bottle feed' : fmtAmount(f);
+    return 'Breast feed';
   }
 
   function milkRowHtml(f){
     return '<div class="entry-row">' +
       '<div class="entry-main">' +
-        '<span class="entry-range">' + (f.amountMl ? f.amountMl + ' ml' : 'Feed') + '</span>' +
+        '<span class="entry-range">' + feedTitle(f) + '</span>' +
         metaHtml(f) +
         (f.notes ? '<span class="entry-notes">' + escapeHtml(f.notes) + '</span>' : '') +
       '</div>' +
@@ -1087,26 +1158,64 @@
       el('milk-log'), groups, milkRowHtml,
       function(items){
         var ml = items.reduce(function(s, f){ return s + Number(f.amountMl || 0); }, 0);
-        return (ml > 0 ? ml + ' ml · ' : '') + plural(items.length, 'feed');
+        var bottles = items.filter(function(f){ return f.kind === 'bottle'; }).length;
+        var label = plural(items.length, 'feed');
+        if (bottles && ml > 0){
+          var unit = milkUnit();
+          label += ' · ' + (unit === 'oz' ? mlToUnit(ml, 'oz') + ' fl oz' : Math.round(ml) + ' ml') + ' in bottles';
+        }
+        return label;
       },
       '<span class="empty-icon">&#127868;</span><p>No feeds logged yet.<br>Add the first one above.</p>'
     );
+    renderUnitControls();
   }
+
+  el('m-bottle').addEventListener('change', function(){
+    setBottleFields();
+    if (el('m-bottle').checked) el('m-amount').focus();
+    snapshotForm('milk-form');
+  });
+
+  el('m-unit').addEventListener('click', async function(ev){
+    var btn = ev.target.closest('.unit-btn');
+    if (!btn) return;
+    var unit = btn.getAttribute('data-unit');
+    if (unit === milkUnit()) return;
+    // Keep whatever is typed meaning the same amount after the switch.
+    var typed = el('m-amount').value;
+    var asMl = unitToMl(typed, milkUnit());
+    var settings = Object.assign({}, state.settings, { milkUnit: unit });
+    await commit([{ type: 'settings', settings: settings }]);
+    el('m-amount').value = asMl == null ? '' : mlToUnit(asMl, unit);
+    renderUnitControls();
+    snapshotForm('milk-form');
+  });
 
   el('milk-form').addEventListener('submit', async function(ev){
     ev.preventDefault();
     hideError('m-error');
     var date = el('m-date').value;
     var time = el('m-time').value;
-    var amount = Number(el('m-amount').value);
+    var isBottle = el('m-bottle').checked;
     if (!date){ showError('m-error', 'Pick the date of this feed.', 'm-date'); return; }
     if (!time){ showError('m-error', 'Enter the time of this feed.', 'm-time'); return; }
+
+    var amountMl = null;
+    if (isBottle){
+      var typed = el('m-amount').value.trim();
+      if (typed){
+        amountMl = unitToMl(typed, milkUnit());
+        if (amountMl == null){ showError('m-error', 'Enter how much was in the bottle, or clear the amount.', 'm-amount'); return; }
+      }
+    }
 
     var feed = {
       id: el('m-id').value || uid(),
       date: date,
       time: time,
-      amountMl: amount > 0 ? amount : null,
+      kind: isBottle ? 'bottle' : 'breast',
+      amountMl: amountMl,
       notes: el('m-notes').value.trim()
     };
     resetMilkForm();
@@ -1345,19 +1454,28 @@
     el('set-night-start').value = s.nightStart || '19:00';
     el('set-night-end').value = s.nightEnd || '06:00';
     hideError('set-error');
-    el('settings-panel').hidden = false;
-    el('settings-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    el('settings-overlay').hidden = false;
+    el('set-dob').focus();
   }
+  function closeSettings(){ el('settings-overlay').hidden = true; }
+
   el('settings-btn').addEventListener('click', openSettings);
-  el('set-cancel').addEventListener('click', function(){ el('settings-panel').hidden = true; });
+  el('set-cancel').addEventListener('click', closeSettings);
+  el('settings-close').addEventListener('click', closeSettings);
+  el('settings-overlay').addEventListener('click', function(ev){
+    if (ev.target === el('settings-overlay')) closeSettings();
+  });
+  document.addEventListener('keydown', function(ev){
+    if (ev.key === 'Escape' && !el('settings-overlay').hidden) closeSettings();
+  });
   el('settings-form').addEventListener('submit', async function(ev){
     ev.preventDefault();
     hideError('set-error');
     var dob = el('set-dob').value, ns = el('set-night-start').value, ne = el('set-night-end').value;
     if (dob && dob > dateKey(new Date())){ showError('set-error', 'The date of birth can’t be in the future.', 'set-dob'); return; }
     if (!ns || !ne){ showError('set-error', 'Enter both night times.', ns ? 'set-night-end' : 'set-night-start'); return; }
-    el('settings-panel').hidden = true;
-    await commit([{ type: 'settings', settings: { dob: dob, nightStart: ns, nightEnd: ne } }]);
+    closeSettings();
+    await commit([{ type: 'settings', settings: Object.assign({}, state.settings, { dob: dob, nightStart: ns, nightEnd: ne }) }]);
   });
 
   function renderHome(){
@@ -1437,8 +1555,8 @@
       if (chip.hasAttribute('data-minutes') && row){
         var minutes = Number(chip.getAttribute('data-minutes'));
         el(row.getAttribute('data-target')).value = timeValue(new Date(Date.now() - minutes * 60000));
-      } else if (chip.hasAttribute('data-ml') && row){
-        el(row.getAttribute('data-target')).value = chip.getAttribute('data-ml');
+      } else if (chip.hasAttribute('data-amount') && row){
+        el(row.getAttribute('data-target')).value = chip.getAttribute('data-amount');
       } else if (chip.hasAttribute('data-before')){
         var before = Number(chip.getAttribute('data-before'));
         var startVal = el('f-start').value;
