@@ -46,6 +46,13 @@ No build step. The app is plain HTML, CSS and JavaScript.
 
 Sign-in is by emailed magic link; no passwords are stored.
 
+## Installing on a phone
+
+The app is a progressive web app: open it in the phone's browser and add it to
+the home screen (iPhone: Share → Add to Home Screen; Android Chrome: menu →
+Add to Home screen / Install app). It then opens full-screen like a native
+app and keeps working offline; changes sync when the phone is back online.
+
 ## Running locally
 
 Serve the folder with any static server, for example:
