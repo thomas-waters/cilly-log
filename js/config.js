@@ -1,6 +1,25 @@
-// Public client configuration. The anon key is safe to ship in the browser:
-// row-level security in the database decides what a signed-in user may do.
-window.CILLY_CONFIG = {
-  supabaseUrl: 'https://hopvsalkhtgrqbbkioqn.supabase.co',
-  supabaseAnonKey: 'sb_publishable_IXpyCf7727af0cpGUfP9_Q_R2VOZSJm'
-};
+// Public client configuration. Publishable keys are safe to ship in the
+// browser: row-level security in the database decides what a signed-in user
+// may do. The secret keys never go here.
+//
+// Only the exact live URL uses the live database. Everything else — the
+// /staging/ deployment and local testing — uses the staging project, so
+// experiments can never touch the real log.
+(function(){
+  var ENVIRONMENTS = {
+    live: {
+      supabaseUrl: 'https://hopvsalkhtgrqbbkioqn.supabase.co',
+      supabaseAnonKey: 'sb_publishable_IXpyCf7727af0cpGUfP9_Q_R2VOZSJm'
+    },
+    staging: {
+      supabaseUrl: 'https://kmcviicuibnetrbzcctd.supabase.co',
+      supabaseAnonKey: 'sb_publishable__E2EZvlD4A73QaPx0GlDyQ_pFWFptyB'
+    }
+  };
+
+  var isLive = window.location.hostname === 'thomas-waters.github.io' &&
+    window.location.pathname.indexOf('/staging/') < 0;
+  var env = isLive ? 'live' : 'staging';
+
+  window.CILLY_CONFIG = Object.assign({ env: env }, ENVIRONMENTS[env]);
+})();
