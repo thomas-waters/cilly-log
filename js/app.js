@@ -380,33 +380,45 @@
     return keys;
   }
 
+  // Averages count only the days that actually have something logged: a day
+  // with no entries means nobody wrote it down, not a day without sleep.
+  function averageOver(byDay){
+    var sum = 0, days = 0;
+    Object.keys(byDay).forEach(function(k){
+      if (byDay[k] > 0){ sum += byDay[k]; days++; }
+    });
+    return { avg: days ? sum / days : 0, days: days };
+  }
+
   function statsFor(keys){
     var set = {};
     keys.forEach(function(k){ set[k] = true; });
-    var sleepMs = 0, longestNightMs = 0, ml = 0, meals = 0, feeds = 0, nights = {};
+    var longestNightMs = 0;
+    var sleepByDay = {}, mlByDay = {}, mealsByDay = {};
+
     state.entries.forEach(function(e){
-      if (!set[sleepDayKey(e)]) return;
+      var key = sleepDayKey(e);
+      if (!set[key]) return;
       var dur = entryEnd(e) - entryStart(e);
-      sleepMs += dur;
-      if (isNight(e)){
-        if (dur > longestNightMs) longestNightMs = dur;
-        var k = nightKey(e);
-        nights[k] = (nights[k] || 0) + dur;
-      }
+      sleepByDay[key] = (sleepByDay[key] || 0) + dur;
+      if (isNight(e) && dur > longestNightMs) longestNightMs = dur;
     });
     state.feeds.forEach(function(f){
       if (!set[f.date]) return;
-      feeds++;
-      ml += Number(f.amountMl || 0);
+      mlByDay[f.date] = (mlByDay[f.date] || 0) + Number(f.amountMl || 0);
     });
-    state.solids.forEach(function(s){ if (set[s.date]) meals++; });
+    state.solids.forEach(function(s){
+      if (!set[s.date]) return;
+      mealsByDay[s.date] = (mealsByDay[s.date] || 0) + 1;
+    });
+
+    var sleep = averageOver(sleepByDay), milk = averageOver(mlByDay), meals = averageOver(mealsByDay);
     return {
       days: keys.length,
-      sleepPerDayMs: sleepMs / keys.length,
-      mlPerDay: ml / keys.length,
-      longestNightMs: longestNightMs,
-      mealsPerDay: meals / keys.length,
-      feeds: feeds
+      sleepPerDayMs: sleep.avg, sleepDays: sleep.days,
+      mlPerDay: milk.avg, milkDays: milk.days,
+      mealsPerDay: meals.avg, mealsDays: meals.days,
+      longestNightMs: longestNightMs
     };
   }
 
@@ -421,10 +433,13 @@
       ' (' + (diff > 0 ? '+' : '−') + Math.abs(pct) + '%) vs the week before</span>';
   }
 
-  function summaryTile(label, value, now, before, format){
+  function summaryTile(label, value, now, before, format, daysCounted){
+    var counted = (daysCounted != null && daysCounted > 0 && daysCounted < 7)
+      ? ' <span class="summary-days">over ' + plural(daysCounted, 'day') + '</span>'
+      : '';
     return '<div class="summary-tile">' +
       '<span class="summary-value">' + value + '</span>' +
-      '<span class="summary-label">' + label + '</span>' +
+      '<span class="summary-label">' + label + counted + '</span>' +
       deltaHtml(now, before, format) +
     '</div>';
   }
@@ -436,10 +451,10 @@
     var meals = function(v){ return (Math.round(v * 10) / 10) + ' a day'; };
 
     el('summary-grid').innerHTML =
-      summaryTile('Sleep a day', fmtDur(thisWeek.sleepPerDayMs), thisWeek.sleepPerDayMs, lastWeek.sleepPerDayMs, fmtDur) +
+      summaryTile('Sleep a day', thisWeek.sleepPerDayMs ? fmtDur(thisWeek.sleepPerDayMs) : '—', thisWeek.sleepPerDayMs, lastWeek.sleepPerDayMs, fmtDur, thisWeek.sleepDays) +
       summaryTile('Longest night stretch', thisWeek.longestNightMs ? fmtDur(thisWeek.longestNightMs) : '—', thisWeek.longestNightMs, lastWeek.longestNightMs, fmtDur) +
-      summaryTile('Milk a day', thisWeek.mlPerDay ? ml(thisWeek.mlPerDay) : '—', thisWeek.mlPerDay, lastWeek.mlPerDay, ml) +
-      summaryTile('Meals a day', Math.round(thisWeek.mealsPerDay * 10) / 10, thisWeek.mealsPerDay, lastWeek.mealsPerDay, meals);
+      summaryTile('Milk a day', thisWeek.mlPerDay ? ml(thisWeek.mlPerDay) : '—', thisWeek.mlPerDay, lastWeek.mlPerDay, ml, thisWeek.milkDays) +
+      summaryTile('Meals a day', thisWeek.mealsPerDay ? Math.round(thisWeek.mealsPerDay * 10) / 10 : '—', thisWeek.mealsPerDay, lastWeek.mealsPerDay, meals, thisWeek.mealsDays);
 
     renderDayTable();
     el('print-heading').textContent = 'Cilly Log — 7 days to ' +
@@ -464,10 +479,23 @@
       return { key: key, night: night, naps: naps, ml: ml, meals: meals };
     });
 
-    var totals = rows.reduce(function(acc, r){
-      acc.night += r.night; acc.naps += r.naps; acc.ml += r.ml; acc.meals += r.meals;
-      return acc;
-    }, { night: 0, naps: 0, ml: 0, meals: 0 });
+    // Each column averages over the days that have a figure in that column.
+    function columnAverage(pick){
+      var sum = 0, days = 0;
+      rows.forEach(function(r){
+        var v = pick(r);
+        if (v > 0){ sum += v; days++; }
+      });
+      return days ? sum / days : 0;
+    }
+    var avg = {
+      night: columnAverage(function(r){ return r.night; }),
+      naps: columnAverage(function(r){ return r.naps; }),
+      total: columnAverage(function(r){ return r.night + r.naps; }),
+      ml: columnAverage(function(r){ return r.ml; }),
+      meals: columnAverage(function(r){ return r.meals; })
+    };
+    var loggedDays = rows.filter(function(r){ return r.night + r.naps + r.ml + r.meals > 0; }).length;
 
     var body = rows.map(function(r){
       return '<tr>' +
@@ -485,12 +513,16 @@
       '<tbody>' + body + '</tbody>' +
       '<tfoot><tr>' +
         '<td>Average</td>' +
-        '<td>' + fmtDur(totals.night / 7) + '</td>' +
-        '<td>' + fmtDur(totals.naps / 7) + '</td>' +
-        '<td>' + fmtDur((totals.night + totals.naps) / 7) + '</td>' +
-        '<td>' + (totals.ml ? Math.round(totals.ml / 7) + ' ml' : '—') + '</td>' +
-        '<td>' + (Math.round((totals.meals / 7) * 10) / 10) + '</td>' +
+        '<td>' + (avg.night ? fmtDur(avg.night) : '—') + '</td>' +
+        '<td>' + (avg.naps ? fmtDur(avg.naps) : '—') + '</td>' +
+        '<td>' + (avg.total ? fmtDur(avg.total) : '—') + '</td>' +
+        '<td>' + (avg.ml ? Math.round(avg.ml) + ' ml' : '—') + '</td>' +
+        '<td>' + (avg.meals ? Math.round(avg.meals * 10) / 10 : '—') + '</td>' +
       '</tr></tfoot>';
+
+    el('day-table-note').textContent = loggedDays === 7
+      ? 'Averages cover all 7 days.'
+      : 'Averages count only days with something logged (' + plural(loggedDays, 'day') + ' of 7). Each column counts its own days.';
   }
 
   function csvCell(value){
