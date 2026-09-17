@@ -42,6 +42,14 @@ It holds real family records: treat the live data with care.
   sequences as damage wherever it finds them, so don't paste examples of
   mojibake into the files it scans.
 
+## Checks
+
+`python tools/check_leaks.py` fails on email addresses (other than the
+`@example.com` placeholders), Supabase secret keys, service-role keys, JWTs,
+GitHub tokens and private keys. `python tools/fix_encoding.py --check` fails on
+double-encoded characters. Both run in CI before every deploy, so a push that
+trips them never reaches the live site. Run them locally before committing.
+
 ## Rules
 
 - Never drive the live app's UI (clicks or keystrokes) to read or change

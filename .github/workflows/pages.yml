@@ -17,7 +17,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No secrets or personal data
+        run: python tools/check_leaks.py
+      - name: No double-encoded characters
+        run: python tools/fix_encoding.py --check
+
   build:
+    needs: check
     runs-on: ubuntu-latest
     steps:
       - name: Check out main
