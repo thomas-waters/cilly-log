@@ -6,7 +6,7 @@
  * Requests to other origins (the database, fonts) are never cached here.
  * Bump VERSION when the precache list changes.
  */
-var VERSION = 'cilly-log-v1';
+var VERSION = 'cilly-log-20260917-1706';
 var PRECACHE = [
   './',
   './index.html',
@@ -46,8 +46,12 @@ self.addEventListener('fetch', function(event){
   var url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
+  // Always revalidate the page itself: it carries the version stamps that
+  // point at the current CSS and JS, so a stale copy would load stale scripts.
+  var request = req.mode === 'navigate' ? new Request(req, { cache: 'no-cache' }) : req;
+
   event.respondWith(
-    fetch(req)
+    fetch(request)
       .then(function(res){
         if (res && res.ok){
           var copy = res.clone();
@@ -56,7 +60,8 @@ self.addEventListener('fetch', function(event){
         return res;
       })
       .catch(function(){
-        return caches.match(req).then(function(cached){
+        // ignoreSearch so a versioned asset still matches its cached copy.
+        return caches.match(req, { ignoreSearch: true }).then(function(cached){
           if (cached) return cached;
           if (req.mode === 'navigate') return caches.match('./index.html');
           return Response.error();
