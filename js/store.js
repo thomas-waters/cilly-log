@@ -163,6 +163,10 @@
         var redirect = window.location.origin + window.location.pathname;
         return client.auth.signInWithOtp({ email: email, options: { emailRedirectTo: redirect } });
       },
+      signInWithGoogle: function(){
+        var redirect = window.location.origin + window.location.pathname;
+        return client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: redirect } });
+      },
       signOut: function(){ return client.auth.signOut(); }
     };
   }
