@@ -1,0 +1,60 @@
+name: Deploy to GitHub Pages
+
+# main  -> https://thomas-waters.github.io/cilly-log/
+# staging -> https://thomas-waters.github.io/cilly-log/staging/
+on:
+  push:
+    branches: [main, staging]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main
+
+      - name: Check out staging
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          ref: staging
+          path: staging
+
+      - name: Assemble site
+        run: |
+          mkdir -p site
+          rsync -a --exclude '.git' --exclude '.github' --exclude 'local' --exclude '.claude' main/ site/
+          if [ -f staging/index.html ]; then
+            mkdir -p site/staging
+            rsync -a --exclude '.git' --exclude '.github' --exclude 'local' --exclude '.claude' staging/ site/staging/
+          fi
+          touch site/.nojekyll
+
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

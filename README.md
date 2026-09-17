@@ -59,8 +59,18 @@ works.
 
 ## Deploying
 
-The app is a static site. Deploy the repository root with GitHub Pages
-(Settings → Pages → Deploy from branch → `main` / root).
+GitHub Actions (`.github/workflows/pages.yml`) publishes two copies of the app
+to GitHub Pages on every push:
+
+- `main` → https://thomas-waters.github.io/cilly-log/ — the live app, using
+  the live database. A push to `main` is a release.
+- `staging` → https://thomas-waters.github.io/cilly-log/staging/ — the test
+  copy, using a separate staging database. Try changes here first, then merge
+  `staging` into `main`.
+
+`js/config.js` picks the database from the URL: only the exact live URL uses
+the live project; `/staging/` and local testing use the staging project, so
+experiments can never touch the real log.
 
 ## Data
 

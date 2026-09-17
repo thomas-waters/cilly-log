@@ -1243,6 +1243,9 @@
     }).catch(function(){
       showNotice('Couldn\u2019t load the log. Check your connection and tap refresh.');
     });
+    if (store.kind === 'supabase' && cfg.env !== 'live'){
+      showNotice('Staging copy. Anything logged here is test data and never reaches the live log.');
+    }
     if (store.kind === 'supabase'){
       store.isAllowed().then(function(ok){
         if (!ok) showNotice('This account isn\u2019t on the family list yet, so it can\u2019t see or add anything. Ask the log owner to add it.');
