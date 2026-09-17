@@ -92,7 +92,8 @@
   #app[data-view="home"] .view-home,
   #app[data-view="sleep"] .view-sleep,
   #app[data-view="milk"] .view-milk,
-  #app[data-view="solids"] .view-solids{ display:flex; }
+  #app[data-view="solids"] .view-solids,
+  #app[data-view="summary"] .view-summary{ display:flex; }
   body[data-view="sleep"]{ background:var(--bg-sleep); }
   body[data-view="milk"]{ background:var(--bg-milk); }
   body[data-view="solids"]{ background:var(--bg-solids); }
@@ -235,6 +236,7 @@
   .nav-icon[data-type="sleep"], .event-icon[data-type="sleep"]{ background:var(--accent-soft); color:var(--accent); }
   .nav-icon[data-type="milk"], .event-icon[data-type="milk"]{ background:var(--milk-soft); color:var(--milk); }
   .nav-icon[data-type="solids"], .event-icon[data-type="solids"]{ background:var(--solid-soft); color:var(--solid); }
+  .nav-icon[data-type="summary"]{ background:var(--surface-2); color:var(--ink-soft); }
   .nav-text{ flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
   .nav-title{ font-family:"Fraunces", Georgia, serif; font-size:1.15rem; font-weight:600; }
   .nav-sub{ font-size:0.8rem; color:var(--ink-soft); }
@@ -584,7 +586,85 @@
   .empty p{ margin:0; }
   .empty-icon{ font-size:1.6rem; display:block; margin-bottom:8px; }
 
+  .summary-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .summary-tile{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:14px 16px;
+    display:flex; flex-direction:column; gap:3px;
+  }
+  .summary-label{ font-size:0.78rem; color:var(--ink-soft); }
+  .summary-value{
+    font-family:"JetBrains Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size:1.25rem;
+    font-weight:600;
+  }
+  .summary-delta{ font-size:0.75rem; color:var(--ink-soft); }
+  .summary-delta[data-dir="up"]{ color:var(--accent); }
+  .summary-delta[data-dir="down"]{ color:var(--warn); }
+
+  .table-wrap{ overflow-x:auto; }
+  .day-table{ width:100%; border-collapse:collapse; font-size:0.82rem; }
+  .day-table th, .day-table td{
+    text-align:right;
+    padding:7px 6px;
+    border-bottom:1px solid var(--border);
+    white-space:nowrap;
+  }
+  .day-table th:first-child, .day-table td:first-child{ text-align:left; }
+  .day-table thead th{
+    font-size:0.7rem; text-transform:uppercase; letter-spacing:.05em;
+    color:var(--ink-soft); font-weight:700;
+  }
+  .day-table tbody td{
+    font-family:"JetBrains Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+  .day-table tbody td:first-child{ font-family:inherit; }
+  .day-table tfoot td{ font-weight:700; border-bottom:none; }
+  select{
+    font-family:inherit; font-size:0.95rem; color:var(--ink);
+    background:var(--surface-2); border:1px solid var(--border);
+    border-radius:10px; padding:9px 11px; width:100%;
+  }
+  select:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+
+  .who-chip{
+    font-size:0.62rem;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:var(--ink-soft);
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:5px;
+    padding:1px 5px;
+  }
+
+  .print-only{ display:none; }
   .foot{ text-align:center; }
   .foot p{ margin:0; font-size:0.75rem; color:var(--ink-soft); }
 
   [hidden]{ display:none !important; }
+
+  /* Printing: the summary page only, on white, without the app chrome. */
+  @media print{
+    :root{
+      --bg:#FFFFFF; --surface:#FFFFFF; --surface-2:#F4F4F4;
+      --ink:#111111; --ink-soft:#444444; --border:#999999;
+      --accent:#222222; --accent-soft:#EEEEEE; --warn:#444444;
+      --shadow:none;
+    }
+    body{ padding-inline:0; }
+    .page{ max-width:none; padding-block:0; }
+    .head-btn, .nav-list, .no-print, .toast, .notice, .foot{ display:none !important; }
+    #app .view{ display:none !important; }
+    #app .view-summary{ display:flex !important; }
+    #auth-panel{ display:none !important; }
+    .print-only{ display:block; font-size:0.85rem; color:var(--ink-soft); margin:0; }
+    .panel, .summary-tile{ box-shadow:none; break-inside:avoid; }
+    .summary-grid{ grid-template-columns:1fr 1fr; }
+    .day-table{ font-size:0.78rem; }
+  }

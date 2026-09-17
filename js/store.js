@@ -16,7 +16,11 @@
       settings: { dob: '', nightStart: '19:00', nightEnd: '06:00' },
       entries: [],
       feeds: [],
-      solids: []
+      solids: [],
+      // email -> display name ("Dad", "Mum"), loaded from the database so no
+      // personal addresses live in this repo.
+      people: {},
+      me: ''
     };
   }
 
@@ -28,6 +32,8 @@
     s.entries = Array.isArray(s.entries) ? s.entries : [];
     s.feeds = Array.isArray(s.feeds) ? s.feeds : [];
     s.solids = Array.isArray(s.solids) ? s.solids : [];
+    s.people = s.people && typeof s.people === 'object' ? s.people : {};
+    s.me = typeof s.me === 'string' ? s.me : '';
     return s;
   }
 
@@ -75,27 +81,47 @@
 
     function rowToSleep(r){
       return { id: r.id, date: r.date, start: r.start_time, end: r.end_time,
-        putDown: r.put_down || '', settleNotes: r.settle_notes || '', wakeNotes: r.wake_notes || '' };
+        putDown: r.put_down || '', settleNotes: r.settle_notes || '', wakeNotes: r.wake_notes || '',
+        createdBy: r.created_by || '' };
     }
     function sleepToRow(e){
       return { id: e.id, date: e.date, start_time: e.start, end_time: e.end,
-        put_down: e.putDown || '', settle_notes: e.settleNotes || '', wake_notes: e.wakeNotes || '' };
+        put_down: e.putDown || '', settle_notes: e.settleNotes || '', wake_notes: e.wakeNotes || '',
+        created_by: e.createdBy || null };
     }
     function rowToFeed(r){
-      return { id: r.id, date: r.date, time: r.time, amountMl: r.amount_ml == null ? null : Number(r.amount_ml), notes: r.notes || '' };
+      return { id: r.id, date: r.date, time: r.time, amountMl: r.amount_ml == null ? null : Number(r.amount_ml),
+        notes: r.notes || '', createdBy: r.created_by || '' };
     }
     function feedToRow(f){
-      return { id: f.id, date: f.date, time: f.time, amount_ml: f.amountMl == null ? null : f.amountMl, notes: f.notes || '' };
+      return { id: f.id, date: f.date, time: f.time, amount_ml: f.amountMl == null ? null : f.amountMl,
+        notes: f.notes || '', created_by: f.createdBy || null };
     }
     function rowToSolid(r){
-      return { id: r.id, date: r.date, time: r.time, foods: Array.isArray(r.foods) ? r.foods : [], notes: r.notes || '' };
+      return { id: r.id, date: r.date, time: r.time, foods: Array.isArray(r.foods) ? r.foods : [],
+        notes: r.notes || '', createdBy: r.created_by || '' };
     }
     function solidToRow(s){
-      return { id: s.id, date: s.date, time: s.time, foods: s.foods || [], notes: s.notes || '' };
+      return { id: s.id, date: s.date, time: s.time, foods: s.foods || [],
+        notes: s.notes || '', created_by: s.createdBy || null };
     }
 
     var TABLE = { entries: 'sleeps', feeds: 'feeds', solids: 'solids' };
     var TO_ROW = { entries: sleepToRow, feeds: feedToRow, solids: solidToRow };
+
+    function isMissingColumn(error, column){
+      if (!error) return false;
+      if (error.code === '42703') return true;
+      return String(error.message || '').indexOf(column) >= 0;
+    }
+
+    var myEmail = '';
+    async function whoAmI(){
+      if (myEmail) return myEmail;
+      var r = await client.auth.getUser();
+      myEmail = r.data && r.data.user && r.data.user.email ? r.data.user.email.toLowerCase() : '';
+      return myEmail;
+    }
 
     async function load(){
       var results = await Promise.all([
@@ -113,15 +139,38 @@
         if (row.key === 'status') state.status = Object.assign(state.status, row.value || {});
         if (row.key === 'settings') state.settings = Object.assign(state.settings, row.value || {});
       });
+      // Names are a nicety: if the table has no display names yet, entries
+      // simply show no chip.
+      var names = await client.from('allowed_users').select('email, display_name');
+      if (!names.error && names.data){
+        names.data.forEach(function(row){
+          if (row.email && row.display_name) state.people[String(row.email).toLowerCase()] = row.display_name;
+        });
+      }
+      state.me = await whoAmI();
       return normalize(state);
     }
 
     async function apply(ops){
+      var me = await whoAmI();
       for (var i = 0; i < ops.length; i++){
         var op = ops[i], res = null;
-        if (op.type === 'upsert') res = await client.from(TABLE[op.collection]).upsert(TO_ROW[op.collection](op.record));
+        if (op.type === 'upsert'){
+          if (!op.record.createdBy) op.record.createdBy = me;
+          var row = TO_ROW[op.collection](op.record);
+          res = await client.from(TABLE[op.collection]).upsert(row);
+          // Databases that predate the created_by column still accept the
+          // entry; it just won't say who logged it.
+          if (res.error && isMissingColumn(res.error, 'created_by')){
+            delete row.created_by;
+            res = await client.from(TABLE[op.collection]).upsert(row);
+          }
+        }
         else if (op.type === 'delete') res = await client.from(TABLE[op.collection]).delete().eq('id', op.id);
-        else if (op.type === 'status') res = await client.from('app_state').upsert({ key: 'status', value: op.status });
+        else if (op.type === 'status'){
+          if (op.status.asleep && !op.status.createdBy) op.status.createdBy = me;
+          res = await client.from('app_state').upsert({ key: 'status', value: op.status });
+        }
         else if (op.type === 'settings') res = await client.from('app_state').upsert({ key: 'settings', value: op.settings });
         if (res && res.error) throw res.error;
       }
