@@ -92,6 +92,8 @@ create policy "family only" on public.app_state
 -- Live updates between phones.
 alter publication supabase_realtime add table public.sleeps, public.feeds, public.solids, public.app_state;
 
--- The first allowed user. Add the second parent with another insert (lowercase email).
-insert into public.allowed_users (email) values ('name@example.com')
+-- Who may sign in (lowercase emails). Add more rows to this list as needed.
+insert into public.allowed_users (email) values
+  ('name@example.com'),
+  ('name@example.com')
 on conflict (email) do nothing;
