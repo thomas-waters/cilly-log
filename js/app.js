@@ -393,9 +393,9 @@
       var total = list.reduce(function(s, d){ return s + d; }, 0);
       var wakings = list.length - 1;
       el('stat-night').textContent = fmtDur(total);
-      el('stat-night-label').textContent = (latest === todayKey ? 'Tonight so far' : latest === yKey ? 'Last night' : friendlyDate(latest)) + ' Â· ' + (wakings ? plural(wakings, 'waking') : 'no wakings');
+      el('stat-night-label').textContent = (latest === todayKey ? 'Tonight so far' : latest === yKey ? 'Last night' : friendlyDate(latest)) + ' · ' + (wakings ? plural(wakings, 'waking') : 'no wakings');
     } else {
-      el('stat-night').textContent = 'â€”';
+      el('stat-night').textContent = '—';
       el('stat-night-label').textContent = 'Last night';
     }
   }
@@ -411,7 +411,7 @@
     var ww = wakeWindow();
     var winEl = el('wake-window'), stEl = el('wake-state'), foot = el('wake-foot');
     if (!ww){
-      winEl.textContent = 'â€”';
+      winEl.textContent = '—';
       stEl.textContent = 'Add a date of birth in Settings';
       stEl.dataset.state = 'none';
       foot.textContent = '';
@@ -419,11 +419,11 @@
     }
     var open = new Date(last.getTime() + ww.min * 60000);
     var close = new Date(last.getTime() + ww.max * 60000);
-    winEl.textContent = fmtTime(open) + ' â€“ ' + fmtTime(close);
+    winEl.textContent = fmtTime(open) + ' – ' + fmtTime(close);
     if (now < open){ stEl.textContent = 'opens in ' + fmtDur(open - now); stEl.dataset.state = 'soon'; }
     else if (now <= close){ stEl.textContent = 'open now'; stEl.dataset.state = 'open'; }
     else { stEl.textContent = 'past the usual window'; stEl.dataset.state = 'past'; }
-    foot.textContent = 'Based on typical wake windows at ' + ww.months + ' months (' + fmtDur(ww.min * 60000) + 'â€“' + fmtDur(ww.max * 60000) + '). A guide, not a rule.';
+    foot.textContent = 'Based on typical wake windows at ' + ww.months + ' months (' + fmtDur(ww.min * 60000) + '–' + fmtDur(ww.max * 60000) + '). A guide, not a rule.';
   }
 
   function sleepRowHtml(e){
@@ -573,7 +573,7 @@
       days: days.map(function(d){
         return { key: d.key, date: d.date,
           segments: [{ minutes: d.night, cls: 'chart-seg-night' }, { minutes: d.nap, cls: 'chart-seg-nap' }],
-          tip: dayLabel(d, todayKey) + ' Â· Night ' + fmtDur(d.night * 60000) + ' Â· Naps ' + fmtDur(d.nap * 60000) };
+          tip: dayLabel(d, todayKey) + ' · Night ' + fmtDur(d.night * 60000) + ' · Naps ' + fmtDur(d.nap * 60000) };
       }),
       niceMax: function(m){ return niceCeilHours(m) * 60; },
       yLabel: function(m){ return (Math.round(m / 6) / 10) + 'h'; },
@@ -595,11 +595,11 @@
         var avg = d.count ? d.sum / d.count : 0;
         return { key: d.key, date: d.date,
           segments: [{ minutes: avg, cls: 'chart-seg-night' }],
-          tip: dayLabel(d, todayKey) + ' Â· ' + (d.count ? Math.round(avg) + 'm to settle on average (' + plural(d.count, 'sleep') + ')' : 'No put-down times logged') };
+          tip: dayLabel(d, todayKey) + ' · ' + (d.count ? Math.round(avg) + 'm to settle on average (' + plural(d.count, 'sleep') + ')' : 'No put-down times logged') };
       }),
       niceMax: function(m){ var steps = [5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 240, 360]; for (var i = 0; i < steps.length; i++){ if (steps[i] >= m) return steps[i]; } return Math.ceil(m); },
       yLabel: function(m){ return Math.round(m) + 'm'; },
-      empty: 'Add a â€œput down atâ€ time to a sleep to start tracking settling.'
+      empty: 'Add a “put down at” time to a sleep to start tracking settling.'
     });
   }
 
@@ -845,7 +845,7 @@
       el('milk-log'), groups, milkRowHtml,
       function(items){
         var ml = items.reduce(function(s, f){ return s + Number(f.amountMl || 0); }, 0);
-        return (ml > 0 ? ml + ' ml Â· ' : '') + plural(items.length, 'feed');
+        return (ml > 0 ? ml + ' ml · ' : '') + plural(items.length, 'feed');
       },
       '<span class="empty-icon">&#127868;</span><p>No feeds logged yet.<br>Add the first one above.</p>'
     );
@@ -1050,7 +1050,7 @@
     var title = '', sub = '', notes = '';
     if (ev.kind === 'sleep'){
       title = 'Slept ' + fmtDur(entryEnd(ev.src) - entryStart(ev.src));
-      sub = fmtTime(entryStart(ev.src)) + ' â€“ ' + fmtTime(entryEnd(ev.src));
+      sub = fmtTime(entryStart(ev.src)) + ' – ' + fmtTime(entryEnd(ev.src));
       notes = noteLines(ev.src);
     } else if (ev.kind === 'milk'){
       title = ev.src.amountMl ? ev.src.amountMl + ' ml milk' : 'Milk feed';
@@ -1084,12 +1084,12 @@
       if (last){
         sub = 'Awake ' + fmtDur(Date.now() - last.getTime());
         var ww = wakeWindow();
-        if (ww) sub += ' Â· nap window from ' + fmtTime(new Date(last.getTime() + ww.min * 60000));
+        if (ww) sub += ' · nap window from ' + fmtTime(new Date(last.getTime() + ww.min * 60000));
       } else {
         sub = 'Nothing logged yet';
       }
     }
-    if (napCount) sub += ' Â· ' + plural(napCount, 'nap') + ' today (' + fmtDur(napMs) + ')';
+    if (napCount) sub += ' · ' + plural(napCount, 'nap') + ' today (' + fmtDur(napMs) + ')';
     el('home-sleep-sub').textContent = sub;
   }
 
@@ -1109,7 +1109,7 @@
     ev.preventDefault();
     hideError('set-error');
     var dob = el('set-dob').value, ns = el('set-night-start').value, ne = el('set-night-end').value;
-    if (dob && dob > dateKey(new Date())){ showError('set-error', 'The date of birth canâ€™t be in the future.', 'set-dob'); return; }
+    if (dob && dob > dateKey(new Date())){ showError('set-error', 'The date of birth can’t be in the future.', 'set-dob'); return; }
     if (!ns || !ne){ showError('set-error', 'Enter both night times.', ns ? 'set-night-end' : 'set-night-start'); return; }
     el('settings-panel').hidden = true;
     await commit([{ type: 'settings', settings: { dob: dob, nightStart: ns, nightEnd: ne } }]);
@@ -1132,7 +1132,7 @@
     if (meals.length){
       var latest = meals.slice().sort(function(a, b){ return atDate(b) - atDate(a); })[0];
       var foods = (latest.foods || []).slice(0, 3).join(', ');
-      el('home-solids-sub').textContent = plural(meals.length, 'meal') + ' today' + (foods ? ' Â· ' + foods : '');
+      el('home-solids-sub').textContent = plural(meals.length, 'meal') + ' today' + (foods ? ' · ' + foods : '');
     } else {
       el('home-solids-sub').textContent = 'No solids logged today';
     }
@@ -1153,7 +1153,7 @@
         if (ms > 0) bits.push(fmtDur(ms));
         if (mlTotal > 0) bits.push(mlTotal + ' ml');
         if (mealCount > 0) bits.push(plural(mealCount, 'meal'));
-        return bits.join(' Â· ');
+        return bits.join(' · ');
       },
       '<span class="empty-icon">&#127772;</span><p>Nothing logged yet.<br>Pick a section above to get started.</p>'
     );
