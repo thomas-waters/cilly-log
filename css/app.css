@@ -644,6 +644,61 @@
     padding:1px 5px;
   }
 
+  .overlay{
+    position:fixed; inset:0; z-index:30;
+    display:flex; align-items:center; justify-content:center;
+    padding:16px;
+    background:color-mix(in srgb, var(--bg) 70%, transparent);
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
+  }
+  .overlay-panel{
+    width:100%; max-width:420px;
+    max-height:calc(100vh - 32px);
+    overflow-y:auto;
+  }
+  .overlay-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .overlay-head h2{ margin:0; }
+
+  #m-bottle-fields{ display:flex; flex-direction:column; gap:10px; }
+  #m-amount-chips{ margin-top:0; }
+  .check-row{
+    display:flex; align-items:center; gap:10px;
+    font-size:0.92rem; font-weight:500;
+    cursor:pointer;
+  }
+  .check-row input{ width:20px; height:20px; accent-color:var(--accent); flex:none; }
+  .label-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .label-row label{ font-size:0.8rem; color:var(--ink-soft); font-weight:500; }
+  .unit-toggle{
+    display:flex; gap:2px;
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:2px;
+  }
+  .unit-btn{
+    font-family:inherit; font-size:0.75rem; font-weight:600;
+    padding:4px 11px; border-radius:999px;
+    border:none; background:none; color:var(--ink-soft);
+    cursor:pointer;
+  }
+  .unit-btn[aria-pressed="true"]{ background:var(--accent); color:var(--accent-ink); }
+  .unit-btn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+  .status-edit{
+    position:absolute; top:10px; right:10px; z-index:2;
+    width:32px; height:32px; border-radius:10px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    color:var(--ink-soft);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+  }
+  .status-edit svg{ width:15px; height:15px; }
+  .status-edit:hover{ color:var(--ink); }
+  .status-edit:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
   .print-only{ display:none; }
   .foot{ text-align:center; }
   .foot p{ margin:0; font-size:0.75rem; color:var(--ink-soft); }
@@ -660,7 +715,7 @@
     }
     body{ padding-inline:0; }
     .page{ max-width:none; padding-block:0; }
-    .head-btn, .nav-list, .no-print, .toast, .notice, .foot{ display:none !important; }
+    .head-btn, .nav-list, .no-print, .toast, .notice, .foot, .overlay{ display:none !important; }
     #app .view{ display:none !important; }
     #app .view-summary{ display:flex !important; }
     #auth-panel{ display:none !important; }
