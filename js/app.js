@@ -6,7 +6,7 @@
     bowl: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M3 11h18a9 9 0 0 1-18 0z"/><path d="M8 11c0-3 1.6-5 4-5s4 2 4 5"/><path d="M6 20h12"/></svg>'
   };
   var TYPE_ICON = { sleep: ICON.moon, milk: ICON.bottle, solids: ICON.bowl };
-  var VIEWS = ['home', 'sleep', 'milk', 'solids'];
+  var VIEWS = ['home', 'sleep', 'milk', 'solids', 'summary'];
   var DRAFT_KEY = 'cilly.draft', VIEW_KEY = 'cilly.view';
   var DRAFT_MAX_AGE = 30 * 60000;
   var FORM_FIELDS = {
@@ -133,12 +133,28 @@
     state.entries.forEach(function(e){ var end = entryEnd(e); if (!latest || end > latest) latest = end; });
     return latest;
   }
+  function personName(record){
+    var email = record && record.createdBy ? String(record.createdBy).toLowerCase() : '';
+    return email ? ((state.people || {})[email] || '') : '';
+  }
+  function personChip(record){
+    var name = personName(record);
+    return name ? '<span class="who-chip">' + escapeHtml(name) + '</span>' : '';
+  }
+
   function sleepMetaHtml(e){
     var bits = [];
     if (isNight(e)) bits.push('<span class="meta-tag">Night</span>');
     var s = settleMinutes(e);
     if (s !== null) bits.push('<span>' + (s === 0 ? 'Asleep on put-down' : 'Settled in ' + s + 'm') + '</span>');
+    var who = personChip(e);
+    if (who) bits.push(who);
     return bits.length ? '<span class="entry-meta">' + bits.join('') + '</span>' : '';
+  }
+
+  function metaHtml(record){
+    var who = personChip(record);
+    return who ? '<span class="entry-meta">' + who + '</span>' : '';
   }
 
   function escapeHtml(s){
@@ -342,7 +358,200 @@
     renderMilk();
     renderSolids();
     renderHome();
+    renderSummary();
   }
+
+  // ======================================================
+  // SUMMARY AND EXPORT
+  // ======================================================
+  // A sleep counts towards the day it belongs to: night sleep towards the
+  // evening it started (so a 3am resettle joins the night before), naps
+  // towards their own date.
+  function sleepDayKey(e){ return isNight(e) ? nightKey(e) : e.date; }
+
+  function dayKeysEndingToday(offsetWeeks, days){
+    var keys = [];
+    for (var i = 0; i < days; i++){
+      var d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() - (offsetWeeks * days) - i);
+      keys.push(dateKey(d));
+    }
+    return keys;
+  }
+
+  function statsFor(keys){
+    var set = {};
+    keys.forEach(function(k){ set[k] = true; });
+    var sleepMs = 0, longestNightMs = 0, ml = 0, meals = 0, feeds = 0, nights = {};
+    state.entries.forEach(function(e){
+      if (!set[sleepDayKey(e)]) return;
+      var dur = entryEnd(e) - entryStart(e);
+      sleepMs += dur;
+      if (isNight(e)){
+        if (dur > longestNightMs) longestNightMs = dur;
+        var k = nightKey(e);
+        nights[k] = (nights[k] || 0) + dur;
+      }
+    });
+    state.feeds.forEach(function(f){
+      if (!set[f.date]) return;
+      feeds++;
+      ml += Number(f.amountMl || 0);
+    });
+    state.solids.forEach(function(s){ if (set[s.date]) meals++; });
+    return {
+      days: keys.length,
+      sleepPerDayMs: sleepMs / keys.length,
+      mlPerDay: ml / keys.length,
+      longestNightMs: longestNightMs,
+      mealsPerDay: meals / keys.length,
+      feeds: feeds
+    };
+  }
+
+  function deltaHtml(now, before, format){
+    if (!before) return '<span class="summary-delta">no figure for the week before</span>';
+    var diff = now - before;
+    var pct = Math.round((diff / before) * 100);
+    if (Math.abs(pct) < 1) return '<span class="summary-delta">about the same as the week before</span>';
+    var dir = diff > 0 ? 'up' : 'down';
+    var arrow = diff > 0 ? '↑' : '↓';
+    return '<span class="summary-delta" data-dir="' + dir + '">' + arrow + ' ' + format(Math.abs(diff)) +
+      ' (' + (diff > 0 ? '+' : '−') + Math.abs(pct) + '%) vs the week before</span>';
+  }
+
+  function summaryTile(label, value, now, before, format){
+    return '<div class="summary-tile">' +
+      '<span class="summary-value">' + value + '</span>' +
+      '<span class="summary-label">' + label + '</span>' +
+      deltaHtml(now, before, format) +
+    '</div>';
+  }
+
+  function renderSummary(){
+    var thisWeek = statsFor(dayKeysEndingToday(0, 7));
+    var lastWeek = statsFor(dayKeysEndingToday(1, 7));
+    var ml = function(v){ return Math.round(v) + ' ml'; };
+    var meals = function(v){ return (Math.round(v * 10) / 10) + ' a day'; };
+
+    el('summary-grid').innerHTML =
+      summaryTile('Sleep a day', fmtDur(thisWeek.sleepPerDayMs), thisWeek.sleepPerDayMs, lastWeek.sleepPerDayMs, fmtDur) +
+      summaryTile('Longest night stretch', thisWeek.longestNightMs ? fmtDur(thisWeek.longestNightMs) : '—', thisWeek.longestNightMs, lastWeek.longestNightMs, fmtDur) +
+      summaryTile('Milk a day', thisWeek.mlPerDay ? ml(thisWeek.mlPerDay) : '—', thisWeek.mlPerDay, lastWeek.mlPerDay, ml) +
+      summaryTile('Meals a day', Math.round(thisWeek.mealsPerDay * 10) / 10, thisWeek.mealsPerDay, lastWeek.mealsPerDay, meals);
+
+    renderDayTable();
+    el('print-heading').textContent = 'Cilly Log — 7 days to ' +
+      new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+    var sub = fmtDur(thisWeek.sleepPerDayMs) + ' sleep a day this week';
+    if (thisWeek.mlPerDay) sub += ' · ' + ml(thisWeek.mlPerDay);
+    el('home-summary-sub').textContent = sub;
+  }
+
+  function renderDayTable(){
+    var keys = dayKeysEndingToday(0, 7).slice().reverse();
+    var rows = keys.map(function(key){
+      var night = 0, naps = 0, ml = 0, meals = 0;
+      state.entries.forEach(function(e){
+        if (sleepDayKey(e) !== key) return;
+        var dur = entryEnd(e) - entryStart(e);
+        if (isNight(e)) night += dur; else naps += dur;
+      });
+      state.feeds.forEach(function(f){ if (f.date === key) ml += Number(f.amountMl || 0); });
+      state.solids.forEach(function(s){ if (s.date === key) meals++; });
+      return { key: key, night: night, naps: naps, ml: ml, meals: meals };
+    });
+
+    var totals = rows.reduce(function(acc, r){
+      acc.night += r.night; acc.naps += r.naps; acc.ml += r.ml; acc.meals += r.meals;
+      return acc;
+    }, { night: 0, naps: 0, ml: 0, meals: 0 });
+
+    var body = rows.map(function(r){
+      return '<tr>' +
+        '<td>' + friendlyDate(r.key) + '</td>' +
+        '<td>' + (r.night ? fmtDur(r.night) : '—') + '</td>' +
+        '<td>' + (r.naps ? fmtDur(r.naps) : '—') + '</td>' +
+        '<td>' + ((r.night + r.naps) ? fmtDur(r.night + r.naps) : '—') + '</td>' +
+        '<td>' + (r.ml ? r.ml + ' ml' : '—') + '</td>' +
+        '<td>' + (r.meals || '—') + '</td>' +
+      '</tr>';
+    }).join('');
+
+    el('day-table').innerHTML =
+      '<thead><tr><th>Day</th><th>Night</th><th>Naps</th><th>Total</th><th>Milk</th><th>Meals</th></tr></thead>' +
+      '<tbody>' + body + '</tbody>' +
+      '<tfoot><tr>' +
+        '<td>Average</td>' +
+        '<td>' + fmtDur(totals.night / 7) + '</td>' +
+        '<td>' + fmtDur(totals.naps / 7) + '</td>' +
+        '<td>' + fmtDur((totals.night + totals.naps) / 7) + '</td>' +
+        '<td>' + (totals.ml ? Math.round(totals.ml / 7) + ' ml' : '—') + '</td>' +
+        '<td>' + (Math.round((totals.meals / 7) * 10) / 10) + '</td>' +
+      '</tr></tfoot>';
+  }
+
+  function csvCell(value){
+    var s = value == null ? '' : String(value);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  function buildCsv(days){
+    var cutoff = null;
+    if (days > 0){
+      var d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() - (days - 1));
+      cutoff = dateKey(d);
+    }
+    var rows = [['Type', 'Date', 'Start', 'End', 'Duration (min)', 'Night', 'Minutes to settle', 'Amount (ml)', 'Foods', 'Settling notes', 'Waking notes', 'Notes', 'Logged by']];
+
+    state.entries.forEach(function(e){
+      if (cutoff && e.date < cutoff) return;
+      var settle = settleMinutes(e);
+      rows.push(['Sleep', e.date, e.start, e.end,
+        Math.round((entryEnd(e) - entryStart(e)) / 60000),
+        isNight(e) ? 'yes' : 'no',
+        settle === null ? '' : settle,
+        '', '', e.settleNotes || '', e.wakeNotes || '', '', personName(e)]);
+    });
+    state.feeds.forEach(function(f){
+      if (cutoff && f.date < cutoff) return;
+      rows.push(['Milk', f.date, f.time, '', '', '', '', f.amountMl == null ? '' : f.amountMl, '', '', '', f.notes || '', personName(f)]);
+    });
+    state.solids.forEach(function(s){
+      if (cutoff && s.date < cutoff) return;
+      rows.push(['Solids', s.date, s.time, '', '', '', '', '', (s.foods || []).join('; '), '', '', s.notes || '', personName(s)]);
+    });
+
+    var header = rows.shift();
+    rows.sort(function(a, b){
+      var ka = a[1] + ' ' + a[2], kb = b[1] + ' ' + b[2];
+      return ka < kb ? -1 : ka > kb ? 1 : 0;
+    });
+    rows.unshift(header);
+    return rows.map(function(r){ return r.map(csvCell).join(','); }).join('\r\n');
+  }
+
+  function downloadCsv(){
+    var days = Number(el('export-range').value);
+    var csv = buildCsv(days);
+    // The BOM makes Excel open it as UTF-8 so notes keep their characters.
+    var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'cilly-log-' + dateKey(new Date()) + (days > 0 ? '-last-' + days + '-days' : '-all') + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  }
+
+  el('csv-btn').addEventListener('click', downloadCsv);
+  el('print-btn').addEventListener('click', function(){ window.print(); });
 
   // ======================================================
   // SLEEP
@@ -830,6 +1039,7 @@
     return '<div class="entry-row">' +
       '<div class="entry-main">' +
         '<span class="entry-range">' + (f.amountMl ? f.amountMl + ' ml' : 'Feed') + '</span>' +
+        metaHtml(f) +
         (f.notes ? '<span class="entry-notes">' + escapeHtml(f.notes) + '</span>' : '') +
       '</div>' +
       '<div class="entry-side">' +
@@ -967,6 +1177,7 @@
     return '<div class="entry-row">' +
       '<div class="entry-main">' +
         '<span class="entry-range">' + title + '</span>' +
+        metaHtml(s) +
         (s.notes ? '<span class="entry-notes">' + escapeHtml(s.notes) + '</span>' : '') +
       '</div>' +
       '<div class="entry-side">' +
@@ -1059,11 +1270,13 @@
       title = (ev.src.foods && ev.src.foods.length) ? escapeHtml(ev.src.foods.join(', ')) : 'Solids';
       notes = ev.src.notes ? '<span class="entry-notes">' + escapeHtml(ev.src.notes) + '</span>' : '';
     }
+    var who = personChip(ev.src);
     return '<button class="event-row" type="button" data-edit="' + ev.kind + '" data-id="' + ev.id + '">' +
       '<span class="event-icon" data-type="' + ev.kind + '">' + TYPE_ICON[ev.kind] + '</span>' +
       '<span class="event-main">' +
         '<span class="event-title">' + title + '</span>' +
         (sub ? '<span class="event-sub">' + sub + '</span>' : '') +
+        (who ? '<span class="entry-meta">' + who + '</span>' : '') +
         notes +
       '</span>' +
       '<span class="event-time">' + fmtTime(ev.at) + '</span>' +
@@ -1220,7 +1433,7 @@
 
   // ---------- boot ----------
   var cfg = window.CILLY_CONFIG || {};
-  store = (cfg.supabaseUrl && cfg.supabaseAnonKey && window.supabase)
+  store = (!cfg.forceLocal && cfg.supabaseUrl && cfg.supabaseAnonKey && window.supabase)
     ? window.CillyStore.supabase({ url: cfg.supabaseUrl, anonKey: cfg.supabaseAnonKey })
     : window.CillyStore.local();
   var started = false;

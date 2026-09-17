@@ -1,8 +1,9 @@
 -- Cilly Log database schema. Run once in the Supabase SQL editor.
 
--- Who may use the app. Add each parent's sign-in email here.
+-- Who may use the app, and the name shown on the entries they log.
 create table if not exists public.allowed_users (
-  email text primary key
+  email        text primary key,
+  display_name text
 );
 
 create table if not exists public.sleeps (
@@ -13,6 +14,7 @@ create table if not exists public.sleeps (
   put_down     text not null default '',
   settle_notes text not null default '',
   wake_notes   text not null default '',
+  created_by   text,
   updated_at   timestamptz not null default now()
 );
 
@@ -22,6 +24,7 @@ create table if not exists public.feeds (
   time       text not null,
   amount_ml  numeric,
   notes      text not null default '',
+  created_by text,
   updated_at timestamptz not null default now()
 );
 
@@ -31,6 +34,7 @@ create table if not exists public.solids (
   time       text not null,
   foods      jsonb not null default '[]'::jsonb,
   notes      text not null default '',
+  created_by text,
   updated_at timestamptz not null default now()
 );
 
@@ -72,6 +76,10 @@ alter table public.sleeps        enable row level security;
 alter table public.feeds         enable row level security;
 alter table public.solids        enable row level security;
 alter table public.app_state     enable row level security;
+
+drop policy if exists "family can read" on public.allowed_users;
+create policy "family can read" on public.allowed_users
+  for select to authenticated using (public.is_family());
 
 drop policy if exists "family only" on public.sleeps;
 create policy "family only" on public.sleeps

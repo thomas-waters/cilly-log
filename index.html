@@ -100,6 +100,16 @@
         </span>
         <span class="nav-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M9 5l7 7-7 7"/></svg></span>
       </button>
+      <button class="nav-tile" type="button" data-nav="summary">
+        <span class="nav-icon" data-type="summary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>
+        </span>
+        <span class="nav-text">
+          <span class="nav-title">Summary</span>
+          <span class="nav-sub" id="home-summary-sub">This week at a glance, and export</span>
+        </span>
+        <span class="nav-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M9 5l7 7-7 7"/></svg></span>
+      </button>
     </nav>
 
     <section class="panel writer-only" id="settings-panel" hidden>
@@ -426,6 +436,58 @@
       <h2>Solids log</h2>
     </div>
     <section class="log" id="solids-log"></section>
+  </section>
+
+  <!-- ================= SUMMARY ================= -->
+  <section class="view view-summary" aria-label="Summary">
+    <header class="page-head">
+      <button class="head-btn" type="button" data-nav="home" aria-label="Back to home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <span class="nav-icon head-icon" data-type="summary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>
+      </span>
+      <div class="head-text">
+        <h1>Summary</h1>
+        <p class="tagline">The last 7 days, and how they compare.</p>
+      </div>
+      <button class="head-btn" type="button" data-refresh aria-label="Refresh">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>
+      </button>
+    </header>
+
+    <p class="print-only" id="print-heading"></p>
+
+    <section class="summary-grid" id="summary-grid" aria-label="This week compared with last week"></section>
+
+    <section class="panel" aria-label="Day by day">
+      <div class="panel-head">
+        <h2>Day by day</h2>
+        <span class="chart-range">Last 7 days</span>
+      </div>
+      <div class="table-wrap">
+        <table class="day-table" id="day-table"></table>
+      </div>
+    </section>
+
+    <section class="panel no-print" aria-label="Export">
+      <h2>Export</h2>
+      <div class="field">
+        <label for="export-range">Period</label>
+        <select id="export-range">
+          <option value="7">Last 7 days</option>
+          <option value="14" selected>Last 14 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="0">Everything</option>
+        </select>
+      </div>
+      <p class="form-hint">The spreadsheet has one row per event. The printout is this page: the weekly figures and the day-by-day table.</p>
+      <div class="form-actions">
+        <button type="button" class="btn ghost" id="print-btn">Print summary</button>
+        <button type="button" class="btn primary" id="csv-btn">Download spreadsheet</button>
+      </div>
+    </section>
   </section>
 
 </div>
