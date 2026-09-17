@@ -86,7 +86,7 @@
   .page{
     max-width:460px;
     margin:0 auto;
-    padding-block:24px 48px;
+    padding-block:calc(24px + env(safe-area-inset-top, 0px)) calc(48px + env(safe-area-inset-bottom, 0px));
   }
   .view{ display:none; flex-direction:column; gap:22px; }
   #app[data-view="home"] .view-home,

@@ -1225,6 +1225,22 @@
     : window.CillyStore.local();
   var started = false;
 
+  if ('serviceWorker' in navigator){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('sw.js').then(function(reg){
+        reg.addEventListener('updatefound', function(){
+          var worker = reg.installing;
+          if (!worker) return;
+          worker.addEventListener('statechange', function(){
+            if (worker.state === 'installed' && navigator.serviceWorker.controller){
+              showToast('An update is ready. Tap the refresh button to get it.');
+            }
+          });
+        });
+      }).catch(function(){});
+    });
+  }
+
   function startApp(){
     if (started) return;
     started = true;
