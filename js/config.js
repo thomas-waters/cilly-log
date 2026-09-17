@@ -21,5 +21,9 @@
     window.location.pathname.indexOf('/staging/') < 0;
   var env = isLive ? 'live' : 'staging';
 
-  window.CILLY_CONFIG = Object.assign({ env: env }, ENVIRONMENTS[env]);
+  // ?store=local runs the app against this browser's own storage with no
+  // sign-in, for looking at the interface without touching any database.
+  var forceLocal = window.location.search.indexOf('store=local') >= 0;
+
+  window.CILLY_CONFIG = Object.assign({ env: env, forceLocal: forceLocal }, ENVIRONMENTS[env]);
 })();
