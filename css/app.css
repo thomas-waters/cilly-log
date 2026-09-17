@@ -660,6 +660,8 @@
   .overlay-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
   .overlay-head h2{ margin:0; }
 
+  #m-bottle-fields{ display:flex; flex-direction:column; gap:10px; }
+  #m-amount-chips{ margin-top:0; }
   .check-row{
     display:flex; align-items:center; gap:10px;
     font-size:0.92rem; font-weight:500;
