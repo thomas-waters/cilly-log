@@ -1276,6 +1276,11 @@
 
   if (store.kind === 'supabase'){
     el('sign-out').hidden = false;
+    el('auth-google').addEventListener('click', async function(){
+      hideError('auth-error');
+      var r = await store.signInWithGoogle();
+      if (r && r.error) showError('auth-error', 'Couldn’t start Google sign-in: ' + r.error.message);
+    });
     el('auth-form').addEventListener('submit', async function(ev){
       ev.preventDefault();
       hideError('auth-error');
