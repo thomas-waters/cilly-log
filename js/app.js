@@ -668,6 +668,19 @@
       else { day[key] = (day[key] || 0) + dur; naps[key] = (naps[key] || 0) + 1; }
     });
 
+    // Averages over two or three days say more about which days got written
+    // down than about how he sleeps, so say so rather than letting the
+    // comparison read as settled.
+    var loggedDays = Object.keys(total).length;
+    var warn = el('norms-warn');
+    warn.hidden = loggedDays >= 7;
+    if (!warn.hidden){
+      warn.textContent = loggedDays === 0
+        ? 'Nothing logged in the last 7 days, so there is nothing to compare yet.'
+        : 'Based on ' + plural(loggedDays, 'day') + ' of the last 7. Until there is a full week, ' +
+          'read these as a rough guide rather than a fair comparison.';
+    }
+
     function row(label, avg, low, high, format){
       var usual = low === high ? format(low) : format(low) + ' – ' + format(high);
       if (!avg) return '<tr><td>' + label + '</td><td>—</td><td>' + usual + '</td><td>—</td></tr>';

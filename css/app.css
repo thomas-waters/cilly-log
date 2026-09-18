@@ -151,7 +151,7 @@
   .wake-state[data-state="past"]{ color:var(--warn); }
   .wake-foot{ margin:0; font-size:0.72rem; color:var(--ink-soft); }
   .wake-state[data-state="night"]{ color:var(--ink-soft); }
-  .wake-hint{
+  .wake-hint, .warn-note{
     margin:0;
     background:var(--warn-soft);
     border:1px solid var(--warn);
