@@ -1639,6 +1639,7 @@
 
   if (store.kind === 'supabase'){
     el('sign-out').hidden = false;
+    el('auth-email-block').hidden = !cfg.emailSignIn;
     el('auth-google').addEventListener('click', async function(){
       hideError('auth-error');
       var r = await store.signInWithGoogle();
@@ -1647,6 +1648,7 @@
     el('auth-form').addEventListener('submit', async function(ev){
       ev.preventDefault();
       hideError('auth-error');
+      if (!cfg.emailSignIn) return;
       var email = el('auth-email').value.trim();
       if (!email){ showError('auth-error', 'Enter your email address.', 'auth-email'); return; }
       el('auth-submit').disabled = true;
