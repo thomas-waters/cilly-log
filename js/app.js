@@ -324,6 +324,30 @@
     n.hidden = false;
   }
 
+  // ---------- overlays ----------
+  // Every form opens over the page rather than further down it, so the shape
+  // is the same wherever you are: tap the card at the top, fill it in, done.
+  // Each one lives inside its own view, so only the current view's can show.
+  var OVERLAYS = ['settings-overlay', 'entry-overlay', 'milk-overlay', 'solid-overlay'];
+  function openOverlay(id){
+    el(id).hidden = false;
+  }
+  function closeOverlay(id){
+    el(id).hidden = true;
+  }
+  // Which overlay is actually on screen. An overlay belonging to another view
+  // can still be open behind the scenes, and neither `hidden` nor the computed
+  // display gives it away: a fixed element reports offsetParent null, and
+  // getComputedStyle returns its own display even inside a hidden view. Client
+  // rectangles are the test that accounts for the hidden ancestor.
+  function openOverlayId(){
+    for (var i = 0; i < OVERLAYS.length; i++){
+      var node = el(OVERLAYS[i]);
+      if (node && !node.hidden && node.getClientRects().length) return OVERLAYS[i];
+    }
+    return null;
+  }
+
   function groupByDay(items, timeOf){
     var sorted = items.slice().sort(function(a, b){ return timeOf(b) - timeOf(a); });
     var groups = [], byKey = {};
@@ -394,10 +418,16 @@
     if (formId === 'entry-form'){
       entry.mode = formMode;
       entry.title = el('form-title').textContent;
-      entry.open = !el('form-panel').hidden;
+      entry.open = !el('entry-overlay').hidden;
     }
-    if (formId === 'solid-form') entry.foods = solidDraftFoods.slice();
-    if (formId === 'milk-form') entry.bottle = el('m-bottle').checked;
+    if (formId === 'solid-form'){
+      entry.foods = solidDraftFoods.slice();
+      entry.open = !el('solid-overlay').hidden;
+    }
+    if (formId === 'milk-form'){
+      entry.bottle = el('m-bottle').checked;
+      entry.open = !el('milk-overlay').hidden;
+    }
     draft[formId] = entry;
     draft.at = Date.now();
     ssSet(DRAFT_KEY, draft);
@@ -431,7 +461,7 @@
         setFields(s.fields);
         el('form-title').textContent = s.title || 'Log a sleep session';
         applyMode();
-        el('form-panel').hidden = false;
+        openOverlay('entry-overlay');
         hideError('form-error');
         snapshotForm('entry-form');
       }
@@ -444,6 +474,7 @@
         setFields(m.fields);
         el('m-bottle').checked = !!m.bottle;
         setBottleFields();
+        if (m.open) openOverlay('milk-overlay');
         snapshotForm('milk-form');
       }
     }
@@ -455,6 +486,7 @@
         setFields(so.fields);
         solidDraftFoods = (so.foods || []).slice();
         renderFoodHelpers();
+        if (so.open) openOverlay('solid-overlay');
         snapshotForm('solid-form');
       }
     }
@@ -1141,10 +1173,8 @@
   }
 
   function openPanel(){
-    var panel = el('form-panel');
-    panel.hidden = false;
     hideError('form-error');
-    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    openOverlay('entry-overlay');
     snapshotForm('entry-form');
   }
 
@@ -1205,7 +1235,7 @@
   }
 
   function closeForm(){
-    el('form-panel').hidden = true;
+    closeOverlay('entry-overlay');
     el('entry-form').reset();
     el('entry-id').value = '';
     hideError('form-error');
@@ -1236,6 +1266,7 @@
 
   el('add-btn').addEventListener('click', function(){ openForm(null); });
   el('f-cancel').addEventListener('click', closeForm);
+  el('form-close').addEventListener('click', closeForm);
 
   el('entry-form').addEventListener('submit', async function(ev){
     ev.preventDefault();
@@ -1249,6 +1280,7 @@
         settleNotes: el('f-settle').value.trim(),
         putDown: el('f-putdown').value
       };
+      showToast('Asleep from ' + fmtTime(new Date(status.since)) + ' saved');
       closeForm();
       await commit([{ type: 'status', status: status }]);
       return;
@@ -1282,6 +1314,8 @@
     };
     var ops = [{ type: 'upsert', collection: 'entries', record: entry }];
     if (formMode === 'wake') ops.push({ type: 'status', status: { asleep: false, since: null, settleNotes: '' } });
+    showToast(el('entry-id').value ? 'Sleep updated' :
+      fmtDur(entryEnd(entry) - entryStart(entry)) + ' of sleep logged');
     closeForm();
     await commit(ops);
   });
@@ -1292,8 +1326,10 @@
       var id = el('entry-id').value;
       if (!id){ closeForm(); return; }
       ops = [{ type: 'delete', collection: 'entries', id: id }];
+      showToast('Sleep deleted');
     } else {
       ops = [{ type: 'status', status: { asleep: false, since: null, settleNotes: '' } }];
+      showToast(formMode === 'start' ? 'Sleep cancelled' : 'Sleep discarded');
     }
     closeForm();
     await commit(ops);
@@ -1350,11 +1386,20 @@
     el('m-title').textContent = 'Log a feed';
     el('m-submit').textContent = 'Add feed';
     el('m-delete').hidden = true;
-    el('m-cancel').hidden = true;
     setBottleFields();
     renderUnitControls();
     hideError('m-error');
     clearDraft('milk-form');
+  }
+
+  function openMilkForm(){
+    resetMilkForm();
+    openOverlay('milk-overlay');
+    snapshotForm('milk-form');
+  }
+  function closeMilkForm(){
+    closeOverlay('milk-overlay');
+    resetMilkForm();
   }
 
   function editMilk(id, quiet){
@@ -1370,12 +1415,11 @@
     el('m-title').textContent = 'Edit feed';
     el('m-submit').textContent = 'Save';
     el('m-delete').hidden = false;
-    el('m-cancel').hidden = false;
     setBottleFields();
     renderUnitControls();
     hideError('m-error');
     snapshotForm('milk-form');
-    if (!quiet) el('m-time').focus();
+    if (!quiet) openOverlay('milk-overlay');
     return true;
   }
 
@@ -1464,14 +1508,18 @@
       amountMl: amountMl,
       notes: el('m-notes').value.trim()
     };
-    resetMilkForm();
+    showToast(el('m-id').value ? 'Feed updated' : feedTitle(feed) + ' logged at ' + fmtTime(atDate(feed)));
+    closeMilkForm();
     await commit([{ type: 'upsert', collection: 'feeds', record: feed }]);
   });
 
-  el('m-cancel').addEventListener('click', resetMilkForm);
+  el('milk-add-btn').addEventListener('click', function(){ if (!readOnly) openMilkForm(); });
+  el('m-cancel').addEventListener('click', closeMilkForm);
+  el('m-close').addEventListener('click', closeMilkForm);
   el('m-delete').addEventListener('click', async function(){
     var id = el('m-id').value;
-    resetMilkForm();
+    if (id) showToast('Feed deleted');
+    closeMilkForm();
     if (id) await commit([{ type: 'delete', collection: 'feeds', id: id }]);
   });
 
@@ -1533,10 +1581,19 @@
     el('s-title').textContent = 'Log a meal';
     el('s-submit').textContent = 'Add meal';
     el('s-delete').hidden = true;
-    el('s-cancel').hidden = true;
     hideError('s-error');
     renderFoodHelpers();
     clearDraft('solid-form');
+  }
+
+  function openSolidForm(){
+    resetSolidForm();
+    openOverlay('solid-overlay');
+    snapshotForm('solid-form');
+  }
+  function closeSolidForm(){
+    closeOverlay('solid-overlay');
+    resetSolidForm();
   }
 
   function editSolid(id, quiet){
@@ -1552,10 +1609,10 @@
     el('s-title').textContent = 'Edit meal';
     el('s-submit').textContent = 'Save';
     el('s-delete').hidden = false;
-    el('s-cancel').hidden = false;
     hideError('s-error');
     renderFoodHelpers();
     snapshotForm('solid-form');
+    if (!quiet) openOverlay('solid-overlay');
     return true;
   }
 
@@ -1616,14 +1673,18 @@
       foods: solidDraftFoods.slice(),
       notes: el('s-notes').value.trim()
     };
-    resetSolidForm();
+    showToast(el('s-id').value ? 'Meal updated' : meal.foods.join(', ') + ' logged');
+    closeSolidForm();
     await commit([{ type: 'upsert', collection: 'solids', record: meal }]);
   });
 
-  el('s-cancel').addEventListener('click', resetSolidForm);
+  el('solid-add-btn').addEventListener('click', function(){ if (!readOnly) openSolidForm(); });
+  el('s-cancel').addEventListener('click', closeSolidForm);
+  el('s-close').addEventListener('click', closeSolidForm);
   el('s-delete').addEventListener('click', async function(){
     var id = el('s-id').value;
-    resetSolidForm();
+    if (id) showToast('Meal deleted');
+    closeSolidForm();
     if (id) await commit([{ type: 'delete', collection: 'solids', id: id }]);
   });
 
@@ -1731,19 +1792,26 @@
     draftBasis = bedtimeBasis();
     renderBedtimeBasis();
     hideError('set-error');
-    el('settings-overlay').hidden = false;
+    openOverlay('settings-overlay');
     el('set-dob').focus();
   }
-  function closeSettings(){ el('settings-overlay').hidden = true; }
+  function closeSettings(){ closeOverlay('settings-overlay'); }
 
   el('settings-btn').addEventListener('click', openSettings);
   el('set-cancel').addEventListener('click', closeSettings);
   el('settings-close').addEventListener('click', closeSettings);
+  // Settings closes on a tap outside it, but the logging forms do not: a
+  // stray tap on a phone should not throw away a half-typed note.
   el('settings-overlay').addEventListener('click', function(ev){
     if (ev.target === el('settings-overlay')) closeSettings();
   });
   document.addEventListener('keydown', function(ev){
-    if (ev.key === 'Escape' && !el('settings-overlay').hidden) closeSettings();
+    if (ev.key !== 'Escape') return;
+    var open = openOverlayId();
+    if (open === 'settings-overlay') closeSettings();
+    else if (open === 'entry-overlay') closeForm();
+    else if (open === 'milk-overlay') closeMilkForm();
+    else if (open === 'solid-overlay') closeSolidForm();
   });
   el('settings-form').addEventListener('submit', async function(ev){
     ev.preventDefault();

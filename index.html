@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#5B54D6">
   <title>Cilly Log</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
-  <link rel="stylesheet" href="css/app.css?v=20260918-2240">
+  <link rel="stylesheet" href="css/app.css?v=20260918-2255">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -250,8 +250,14 @@
       <div class="chart-wrap" id="settle-wrap"></div>
     </section>
 
-    <section class="panel writer-only" id="form-panel" hidden>
-      <h2 id="form-title">Log a sleep session</h2>
+    <div class="overlay writer-only" id="entry-overlay" hidden>
+    <section class="panel overlay-panel" id="form-panel" role="dialog" aria-modal="true" aria-labelledby="form-title">
+      <div class="overlay-head">
+        <h2 id="form-title">Log a sleep session</h2>
+        <button type="button" class="head-btn" id="form-close" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
       <form id="entry-form">
         <input type="hidden" id="entry-id" value="">
         <div class="field" id="field-date">
@@ -313,6 +319,7 @@
         </div>
       </form>
     </section>
+    </div>
 
     <div class="log-toolbar">
       <h2>Sleep log</h2>
@@ -339,8 +346,27 @@
       </button>
     </header>
 
-    <section class="panel writer-only">
-      <h2 id="m-title">Log a feed</h2>
+    <section class="status-card action-card writer-only">
+      <button class="status-btn" id="milk-add-btn" type="button">
+        <span class="status-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M10 2.5h4v2.5h-4z"/><path d="M9 5h6l1.5 3h-9z"/><path d="M8 8h8v10.5A2.5 2.5 0 0 1 13.5 21h-3A2.5 2.5 0 0 1 8 18.5z"/><path d="M8 12h8M8 15.5h8"/></svg>
+        </span>
+        <span class="status-text">
+          <span class="status-label">Log a feed</span>
+          <span class="status-sub" id="milk-add-sub">Tap to add a breast or bottle feed</span>
+        </span>
+        <span class="nav-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M9 5l7 7-7 7"/></svg></span>
+      </button>
+    </section>
+
+    <div class="overlay writer-only" id="milk-overlay" hidden>
+    <section class="panel overlay-panel" role="dialog" aria-modal="true" aria-labelledby="m-title">
+      <div class="overlay-head">
+        <h2 id="m-title">Log a feed</h2>
+        <button type="button" class="head-btn" id="m-close" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
       <form id="milk-form">
         <input type="hidden" id="m-id" value="">
         <div class="row">
@@ -384,11 +410,12 @@
         <p class="form-error" id="m-error" hidden></p>
         <div class="form-actions">
           <button type="button" class="btn danger" id="m-delete" hidden>Delete</button>
-          <button type="button" class="btn ghost" id="m-cancel" hidden>Cancel</button>
+          <button type="button" class="btn ghost" id="m-cancel">Cancel</button>
           <button type="submit" class="btn primary" id="m-submit">Add feed</button>
         </div>
       </form>
     </section>
+    </div>
 
     <div class="log-toolbar">
       <h2>Feed log</h2>
@@ -414,8 +441,27 @@
       </button>
     </header>
 
-    <section class="panel writer-only">
-      <h2 id="s-title">Log a meal</h2>
+    <section class="status-card action-card writer-only">
+      <button class="status-btn" id="solid-add-btn" type="button">
+        <span class="status-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M3 11h18a9 9 0 0 1-18 0z"/><path d="M8 11c0-3 1.6-5 4-5s4 2 4 5"/><path d="M6 20h12"/></svg>
+        </span>
+        <span class="status-text">
+          <span class="status-label">Log a meal</span>
+          <span class="status-sub" id="solid-add-sub">Tap to add what they ate</span>
+        </span>
+        <span class="nav-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M9 5l7 7-7 7"/></svg></span>
+      </button>
+    </section>
+
+    <div class="overlay writer-only" id="solid-overlay" hidden>
+    <section class="panel overlay-panel" role="dialog" aria-modal="true" aria-labelledby="s-title">
+      <div class="overlay-head">
+        <h2 id="s-title">Log a meal</h2>
+        <button type="button" class="head-btn" id="s-close" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
       <form id="solid-form">
         <input type="hidden" id="s-id" value="">
         <div class="row">
@@ -452,11 +498,12 @@
         <p class="form-error" id="s-error" hidden></p>
         <div class="form-actions">
           <button type="button" class="btn danger" id="s-delete" hidden>Delete</button>
-          <button type="button" class="btn ghost" id="s-cancel" hidden>Cancel</button>
+          <button type="button" class="btn ghost" id="s-cancel">Cancel</button>
           <button type="submit" class="btn primary" id="s-submit">Add meal</button>
         </div>
       </form>
     </section>
+    </div>
 
     <div class="log-toolbar">
       <h2>Solids log</h2>
@@ -532,9 +579,9 @@
 
 <div class="toast" id="toast" hidden></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/config.js?v=20260918-2240"></script>
-<script src="js/store.js?v=20260918-2240"></script>
-<script src="js/sleep-model.js?v=20260918-2240"></script>
-<script src="js/app.js?v=20260918-2240"></script>
+<script src="js/config.js?v=20260918-2255"></script>
+<script src="js/store.js?v=20260918-2255"></script>
+<script src="js/sleep-model.js?v=20260918-2255"></script>
+<script src="js/app.js?v=20260918-2255"></script>
 </body>
 </html>

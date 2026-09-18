@@ -125,7 +125,8 @@
     padding:10px 14px;
     border-radius:10px;
     box-shadow:var(--shadow);
-    z-index:20;
+    /* Above the overlays, so a save is confirmed as the form closes. */
+    z-index:40;
   }
 
   .wake-card{
@@ -328,6 +329,13 @@
     color:var(--accent);
     flex:none;
   }
+
+  /* Milk and solids open their form from a card shaped like the sleep one,
+     so every page is tapped the same way. */
+  .action-card .status-icon{ background:var(--accent-soft); color:var(--accent); }
+  .action-card .status-btn{ padding:18px 20px; }
+  .action-card .status-icon{ width:48px; height:48px; }
+  .action-card .status-icon svg{ width:24px; height:24px; }
 
   .stats-row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   .stat-tile{

@@ -17,6 +17,11 @@ It holds real family records: treat the live data with care.
 - State changes are expressed as ops (`upsert`, `delete`, `status`,
   `settings`) applied to an in-memory state and persisted through the store;
   see `applyOps` and `commit` in `js/app.js`. Keep new features on that model.
+- Every page has the same shape: a card at the top opens a form in an overlay
+  (`openOverlay` / `closeOverlay`), and saving shows a toast and closes it.
+  Each overlay lives inside its own view, so only the current view's can be on
+  screen. Anything new that records something should follow that, not put a
+  form inline on the page.
 - Night sleep vs naps, the sleep guide and time-to-settle are all computed
   from settings stored in the database plus `js/sleep-model.js`, not
   hard-coded in the views. Wake windows in that model describe the day only:
