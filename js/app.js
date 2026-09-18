@@ -833,16 +833,23 @@
     // At night there is no window to count down to: they should go back down.
     if (win.kind === 'night'){
       var band = win.band, night = nightSoFar();
+      var usualNight = fmtDur(band.nightSleep[0] * 60000) + '–' + fmtDur(band.nightSleep[1] * 60000);
       labelEl.textContent = 'Night so far';
-      winEl.textContent = night.ms ? fmtDur(night.ms) : '—';
       stEl.dataset.state = 'night';
-      stEl.textContent = night.ms
-        ? 'usually ' + fmtDur(band.nightSleep[0] * 60000) + '–' + fmtDur(band.nightSleep[1] * 60000) +
-          (night.wakings ? ' · ' + plural(night.wakings, 'waking') : '')
-        : 'nothing logged for tonight yet';
-      foot.textContent = 'Settle them back when you can, lights low and as little fuss as possible. ' +
-        'Wake windows are a daytime guide, so the app is not counting one now.';
-      if (awake >= SPLIT_NIGHT_MS) renderSplitHint(win, night);
+      if (night.ms){
+        winEl.textContent = fmtDur(night.ms);
+        stEl.textContent = 'usually ' + usualNight + (night.wakings ? ' · ' + plural(night.wakings, 'waking') : '');
+        foot.textContent = 'Settle them back when you can, lights low and as little fuss as possible. ' +
+          'Wake windows are a daytime guide, so the app is not counting one now.';
+        if (awake >= SPLIT_NIGHT_MS) renderSplitHint(win, night);
+      } else {
+        // Night hours, but they have not gone down yet: this is bedtime running
+        // late, not a waking, so the reasons below would be the wrong ones.
+        winEl.textContent = '—';
+        stEl.textContent = 'not down yet';
+        foot.textContent = (band.bedtime ? 'Usual bedtime at ' + band.label + ' is ' + fmtRange(band.bedtime[0], band.bedtime[1]) + '. ' : '') +
+          'Night sleep at this age usually runs ' + usualNight + '.';
+      }
       return;
     }
 
