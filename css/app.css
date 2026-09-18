@@ -151,7 +151,7 @@
   .wake-state[data-state="past"]{ color:var(--warn); }
   .wake-foot{ margin:0; font-size:0.72rem; color:var(--ink-soft); }
   .wake-state[data-state="night"]{ color:var(--ink-soft); }
-  .wake-hint{
+  .wake-hint, .warn-note{
     margin:0;
     background:var(--warn-soft);
     border:1px solid var(--warn);
@@ -162,6 +162,12 @@
   }
   .norm-flag{ font-size:0.78rem; color:var(--ink-soft); }
   .norm-flag[data-dir="up"], .norm-flag[data-dir="down"]{ color:var(--warn); font-weight:600; }
+  /* The verdict, and how many days it rests on, stacked under the average so
+     three columns still fit a phone. */
+  .norm-meta, .norm-days{ display:block; font-size:0.72rem; font-weight:400; line-height:1.3; }
+  .norm-days{ color:var(--ink-soft); }
+  #norms-table th, #norms-table td{ padding:7px 5px; vertical-align:top; }
+  .note-soft{ margin:0; font-size:0.78rem; line-height:1.45; color:var(--ink-soft); }
   .chart-legend{ display:flex; gap:14px; font-size:0.75rem; color:var(--ink-soft); }
   .legend-swatch{ display:inline-block; width:10px; height:10px; border-radius:3px; background:var(--accent); margin-right:6px; vertical-align:-1px; }
   .legend-swatch.naps{ opacity:.45; }
