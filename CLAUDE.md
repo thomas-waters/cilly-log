@@ -23,6 +23,10 @@ It holds real family records: treat the live data with care.
   during night hours the app shows night sleep so far and says to settle
   them back, never a countdown. Keep it that way — a wake window is not a
   model of a 2am waking.
+- Bedtime comes from the `bedtimeBasis` setting: `night` (the default) puts
+  it half an hour either side of the night start, `age` uses the band's own
+  range. Any new clock time the guide shows should come from one of those
+  two, not from a constant.
 
 ## Branches and deploys
 

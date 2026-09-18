@@ -183,13 +183,26 @@
   }
   function fmtRange(fromMin, toMin){ return fmtClock(fromMin) + ' – ' + fmtClock(toMin); }
 
-  // Bedtime is the night start from Settings, give or take half an hour. No
-  // clock time is hard-coded: whatever this family calls the start of night is
-  // what the guide aims at, so changing the setting moves the guide with it.
+  // Where bedtime comes from, chosen in Settings:
+  //   'night' (the default) - the night start, give or take half an hour, so
+  //     the guide follows whatever this family calls the start of night.
+  //   'age'   - the published range for the age band, which can sit somewhere
+  //     else entirely if the night times are set for tidy stats rather than
+  //     as a bedtime.
+  // Either way it returns null when a settled bedtime means little at this
+  // age, and then the wake window is left to stand on its own.
   var BEDTIME_SPREAD = 30;
-  function bedtimeRange(){
+  function bedtimeBasis(){
+    return (state.settings || {}).bedtimeBasis === 'age' ? 'age' : 'night';
+  }
+  function bedtimeRange(band){
+    if (band && !band.bedtime) return null;
+    if (bedtimeBasis() === 'age') return band ? band.bedtime.slice() : null;
     var b = nightBounds();
     return [b.start - BEDTIME_SPREAD, b.start + BEDTIME_SPREAD];
+  }
+  function bedtimeSource(){
+    return bedtimeBasis() === 'age' ? 'typical for this age' : 'around the night start in Settings';
   }
 
   var POSITION_WORDS = { first: 'before the first nap', mid: 'between naps', last: 'before bed' };
@@ -200,9 +213,9 @@
   // kind 'night' and no times at all: a baby who wakes at 2am should go back
   // down, not wait out a three-hour window.
   //
-  // For the last sleep of the day the bedtime from Settings leads and the wake
-  // window adjusts it, rather than the other way round. Adding a wake window
-  // to a late nap is what used to push bedtime past eight o'clock.
+  // For the last sleep of the day the bedtime range leads and the wake window
+  // adjusts it, rather than the other way round. Adding a wake window to a
+  // late nap is what used to push bedtime past eight o'clock.
   function sleepWindow(){
     var last = lastWakeDate(), age = currentAge();
     if (!last || !age) return null;
@@ -223,8 +236,8 @@
     // in night hours, or if it leaves too little of the day to be worth a nap.
     if (position === 'last' || readyOpen >= nightAt || nightAt - readyOpen < 20 * 60000){
       kind = 'bed';
-      if (band.hasBedtime){
-        bedRange = bedtimeRange();
+      bedRange = bedtimeRange(band);
+      if (bedRange){
         var from = clockAt(bedRange[0], now), to = clockAt(bedRange[1], now);
         if (readyOpen <= to && readyClose >= from){
           open = new Date(Math.max(readyOpen.getTime(), from.getTime()));
@@ -856,7 +869,8 @@
         // late, not a waking, so the reasons below would be the wrong ones.
         winEl.textContent = '—';
         stEl.textContent = 'not down yet';
-        foot.textContent = (band.hasBedtime ? 'Bedtime is ' + fmtRange(bedtimeRange()[0], bedtimeRange()[1]) + ', around the night start in Settings. ' : '') +
+        var bed = bedtimeRange(band);
+        foot.textContent = (bed ? 'Bedtime is ' + fmtRange(bed[0], bed[1]) + ', ' + bedtimeSource() + '. ' : '') +
           'Night sleep at this age usually runs ' + usualNight + '.';
       }
       return;
@@ -877,7 +891,7 @@
       } else if (win.shift === 'early'){
         note = 'Earlier than the usual ' + usual + ', after a long stretch awake. ';
       } else {
-        note = 'Bedtime is ' + usual + ', around the night start in Settings. ';
+        note = 'Bedtime is ' + usual + ', ' + bedtimeSource() + '. ';
       }
     } else if (win.trimmedAt){
       note = 'Ends at ' + fmtTime(win.trimmedAt) + ', when night sleep starts. ';
@@ -1680,12 +1694,42 @@
     el('home-sleep-sub').textContent = sub;
   }
 
+  // The bedtime choice while the overlay is open, so the hint can preview a
+  // night start that has been typed but not saved yet.
+  var draftBasis = 'night';
+  function bedtimeHintText(){
+    var age = currentAge();
+    if (draftBasis === 'age'){
+      if (!age) return 'Add a date of birth to use the age guide.';
+      if (!age.band.bedtime) return 'Sleep is spread around the clock at ' + age.band.label + ', so the guide leaves bedtime open.';
+      return 'Bedtime aimed at ' + fmtRange(age.band.bedtime[0], age.band.bedtime[1]) + ', the usual range at ' + age.band.label + '.';
+    }
+    var startMin = minutesOf(el('set-night-start').value || '19:00');
+    return 'Bedtime aimed at ' + fmtRange(startMin - BEDTIME_SPREAD, startMin + BEDTIME_SPREAD) +
+      ', half an hour either side of your ' + fmtClock(startMin) + ' night start.';
+  }
+  function renderBedtimeBasis(){
+    Array.prototype.forEach.call(el('set-bedtime-basis').querySelectorAll('.unit-btn'), function(btn){
+      btn.setAttribute('aria-pressed', btn.dataset.basis === draftBasis ? 'true' : 'false');
+    });
+    el('set-bedtime-hint').textContent = bedtimeHintText();
+  }
+  el('set-bedtime-basis').addEventListener('click', function(ev){
+    var btn = ev.target.closest('.unit-btn');
+    if (!btn) return;
+    draftBasis = btn.dataset.basis;
+    renderBedtimeBasis();
+  });
+  el('set-night-start').addEventListener('input', renderBedtimeBasis);
+
   function openSettings(){
     if (readOnly) return;
     var s = state.settings || {};
     el('set-dob').value = s.dob || '';
     el('set-night-start').value = s.nightStart || '19:00';
     el('set-night-end').value = s.nightEnd || '06:00';
+    draftBasis = bedtimeBasis();
+    renderBedtimeBasis();
     hideError('set-error');
     el('settings-overlay').hidden = false;
     el('set-dob').focus();
@@ -1708,7 +1752,7 @@
     if (dob && dob > dateKey(new Date())){ showError('set-error', 'The date of birth can’t be in the future.', 'set-dob'); return; }
     if (!ns || !ne){ showError('set-error', 'Enter both night times.', ns ? 'set-night-end' : 'set-night-start'); return; }
     closeSettings();
-    await commit([{ type: 'settings', settings: Object.assign({}, state.settings, { dob: dob, nightStart: ns, nightEnd: ne }) }]);
+    await commit([{ type: 'settings', settings: Object.assign({}, state.settings, { dob: dob, nightStart: ns, nightEnd: ne, bedtimeBasis: draftBasis }) }]);
   });
 
   function renderHome(){
