@@ -675,34 +675,53 @@
     var warn = el('norms-warn');
     warn.hidden = loggedDays >= 7;
     if (!warn.hidden){
+      // A missed day or two is ordinary, so it is said quietly. The amber box
+      // is kept for a week thin enough that the figures cannot carry it, or it
+      // would be on screen most weeks and stop being read.
+      warn.className = loggedDays >= 5 ? 'note-soft' : 'warn-note';
       warn.textContent = loggedDays === 0
         ? 'Nothing logged in the last 7 days, so there is nothing to compare yet.'
         : 'Based on ' + plural(loggedDays, 'day') + ' of the last 7. Until there is a full week, ' +
           'read these as a rough guide rather than a fair comparison.';
     }
 
-    function row(label, avg, low, high, format){
-      var usual = low === high ? format(low) : format(low) + ' – ' + format(high);
-      if (!avg) return '<tr><td>' + label + '</td><td>—</td><td>' + usual + '</td><td>—</td></tr>';
-      var flag = avg < low ? ['down', 'below'] : avg > high ? ['up', 'above'] : ['', 'in range'];
+    // Each row counts its own days: a day with naps written down but no night
+    // counts towards one and not the other. Below three days there is no
+    // verdict at all, because "in range" off a single night is noise.
+    // The verdict sits under the figure it judges rather than in a column of
+    // its own: three columns fit a phone, four do not.
+    function row(label, stat, low, high, format, rangeFormat){
+      var show = rangeFormat || format;
+      var usual = low === high ? show(low) : show(low) + ' – ' + show(high);
+      if (!stat.avg) return '<tr><td>' + label + '</td><td>—</td><td>' + usual + '</td></tr>';
+      var verdict;
+      if (stat.days < 3){
+        verdict = '<span class="norm-flag">too few days</span>';
+      } else {
+        var flag = stat.avg < low ? ['down', 'below'] : stat.avg > high ? ['up', 'above'] : ['', 'in range'];
+        verdict = '<span class="norm-flag"' + (flag[0] ? ' data-dir="' + flag[0] + '"' : '') + '>' + flag[1] + '</span>';
+      }
+      var basis = stat.days < 7 ? '<span class="norm-days">' + plural(stat.days, 'day') + '</span>' : '';
       return '<tr>' +
         '<td>' + label + '</td>' +
-        '<td>' + format(avg) + '</td>' +
+        '<td>' + format(stat.avg) + '<span class="norm-meta">' + verdict + '</span>' + basis + '</td>' +
         '<td>' + usual + '</td>' +
-        '<td><span class="norm-flag"' + (flag[0] ? ' data-dir="' + flag[0] + '"' : '') + '>' + flag[1] + '</span></td>' +
       '</tr>';
     }
     var hours = function(ms){ return fmtDur(ms); };
+    // The age ranges are whole and half hours, and "11h – 12h" fits a phone
+    // where "11h 0m – 12h 0m" does not.
+    var round = function(ms){ return ms % 3600000 === 0 ? (ms / 3600000) + 'h' : fmtDur(ms); };
     var count = function(n){ return Math.round(n * 10) / 10; };
     var mins = function(m){ return m * 60000; };
 
     el('norms-age').textContent = band.label;
     el('norms-table').innerHTML =
-      '<thead><tr><th>Sleep</th><th>Average</th><th>Usual at this age</th><th></th></tr></thead><tbody>' +
-      row('Night', averageOver(night).avg, mins(band.nightSleep[0]), mins(band.nightSleep[1]), hours) +
-      row('Naps', averageOver(day).avg, mins(band.daySleep[0]), mins(band.daySleep[1]), hours) +
-      row('Total in 24h', averageOver(total).avg, mins(band.total[0]), mins(band.total[1]), hours) +
-      row('Naps a day', averageOver(naps).avg, band.naps[0], band.naps[1], count) +
+      '<thead><tr><th>Sleep</th><th>Average</th><th>Usual</th></tr></thead><tbody>' +
+      row('Night', averageOver(night), mins(band.nightSleep[0]), mins(band.nightSleep[1]), hours, round) +
+      row('Naps', averageOver(day), mins(band.daySleep[0]), mins(band.daySleep[1]), hours, round) +
+      row('Total in 24h', averageOver(total), mins(band.total[0]), mins(band.total[1]), hours, round) +
+      row('Naps a day', averageOver(naps), band.naps[0], band.naps[1], count) +
       '</tbody>';
 
     el('norms-note').textContent = (band.note ? band.note + ' ' : '') +
