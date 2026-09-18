@@ -690,6 +690,16 @@
   .overlay-head h2{ margin:0; }
   /* The delete check opens over whatever form asked for it. */
   .overlay-top{ z-index:35; }
+  .changelog{ display:flex; flex-direction:column; gap:18px; }
+  .release-head{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+  .release-head h3{ margin:0; font-size:0.98rem; }
+  .release-meta{
+    font-family:"JetBrains Mono", ui-monospace, monospace;
+    font-size:0.7rem; color:var(--ink-soft); white-space:nowrap;
+  }
+  .release ul{ margin:6px 0 0; padding-left:18px; display:flex; flex-direction:column; gap:5px; }
+  .release li{ font-size:0.82rem; line-height:1.45; color:var(--ink-soft); }
+
   .confirm-panel{ max-width:360px; display:flex; flex-direction:column; gap:14px; }
   .confirm-text{ margin:0; font-size:0.9rem; line-height:1.5; color:var(--ink-soft); }
   /* Deleting is the point of this dialog, so the red button sits where the

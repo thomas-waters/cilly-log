@@ -330,7 +330,7 @@
   // Each one lives inside its own view, so only the current view's can show.
   // The confirm is first: it opens over the others, so Escape should reach it
   // before the form underneath.
-  var OVERLAYS = ['confirm-overlay', 'settings-overlay', 'entry-overlay', 'milk-overlay', 'solid-overlay'];
+  var OVERLAYS = ['confirm-overlay', 'changelog-overlay', 'settings-overlay', 'entry-overlay', 'milk-overlay', 'solid-overlay'];
   function openOverlay(id){
     el(id).hidden = false;
   }
@@ -1889,6 +1889,47 @@
   }
   function closeSettings(){ closeOverlay('settings-overlay'); }
 
+  // ---------- change log ----------
+  // Entries live in js/changelog.js. The build stamp underneath comes from the
+  // version on this script's own URL, so it always matches what is running.
+  function currentBuild(){
+    var tag = document.querySelector('script[src*="js/app.js"]');
+    var match = tag ? /[?&]v=([^&"]+)/.exec(tag.getAttribute('src') || '') : null;
+    return match ? match[1] : '';
+  }
+  function longDate(key){
+    var parts = String(key).split('-').map(Number);
+    var d = new Date(parts[0], parts[1] - 1, parts[2]);
+    return isNaN(d.getTime()) ? key
+      : d.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  function renderChangelog(){
+    var releases = window.CILLY_CHANGELOG || [];
+    el('changelog-list').innerHTML = releases.map(function(r){
+      return '<section class="release">' +
+        '<div class="release-head">' +
+          '<h3>' + escapeHtml(r.title) + '</h3>' +
+          '<span class="release-meta">' + escapeHtml(r.version) + ' &middot; ' + escapeHtml(longDate(r.date)) + '</span>' +
+        '</div>' +
+        '<ul>' + (r.notes || []).map(function(n){ return '<li>' + escapeHtml(n) + '</li>'; }).join('') + '</ul>' +
+      '</section>';
+    }).join('') || '<p class="form-hint">Nothing recorded yet.</p>';
+    var build = currentBuild();
+    el('changelog-build').textContent = build ? 'Running build ' + build + '.' : '';
+  }
+  function openChangelog(){
+    renderChangelog();
+    openOverlay('changelog-overlay');
+    el('changelog-close').focus();
+  }
+  function closeChangelog(){ closeOverlay('changelog-overlay'); }
+
+  el('changelog-btn').addEventListener('click', openChangelog);
+  el('changelog-close').addEventListener('click', closeChangelog);
+  el('changelog-overlay').addEventListener('click', function(ev){
+    if (ev.target === el('changelog-overlay')) closeChangelog();
+  });
+
   el('settings-btn').addEventListener('click', openSettings);
   el('set-cancel').addEventListener('click', closeSettings);
   el('settings-close').addEventListener('click', closeSettings);
@@ -1912,6 +1953,7 @@
     if (ev.key !== 'Escape') return;
     var open = openOverlayId();
     if (open === 'confirm-overlay') closeConfirm();
+    else if (open === 'changelog-overlay') closeChangelog();
     else if (open === 'settings-overlay') closeSettings();
     else if (open === 'entry-overlay') closeForm();
     else if (open === 'milk-overlay') closeMilkForm();
