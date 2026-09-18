@@ -183,6 +183,15 @@
   }
   function fmtRange(fromMin, toMin){ return fmtClock(fromMin) + ' – ' + fmtClock(toMin); }
 
+  // Bedtime is the night start from Settings, give or take half an hour. No
+  // clock time is hard-coded: whatever this family calls the start of night is
+  // what the guide aims at, so changing the setting moves the guide with it.
+  var BEDTIME_SPREAD = 30;
+  function bedtimeRange(){
+    var b = nightBounds();
+    return [b.start - BEDTIME_SPREAD, b.start + BEDTIME_SPREAD];
+  }
+
   var POSITION_WORDS = { first: 'before the first nap', mid: 'between naps', last: 'before bed' };
 
   // When the next sleep is likely due, and what to call it.
@@ -191,9 +200,9 @@
   // kind 'night' and no times at all: a baby who wakes at 2am should go back
   // down, not wait out a three-hour window.
   //
-  // For the last sleep of the day the age band's bedtime range leads and the
-  // wake window adjusts it, rather than the other way round. Adding a wake
-  // window to a late nap is what used to push bedtime past eight o'clock.
+  // For the last sleep of the day the bedtime from Settings leads and the wake
+  // window adjusts it, rather than the other way round. Adding a wake window
+  // to a late nap is what used to push bedtime past eight o'clock.
   function sleepWindow(){
     var last = lastWakeDate(), age = currentAge();
     if (!last || !age) return null;
@@ -214,9 +223,9 @@
     // in night hours, or if it leaves too little of the day to be worth a nap.
     if (position === 'last' || readyOpen >= nightAt || nightAt - readyOpen < 20 * 60000){
       kind = 'bed';
-      if (band.bedtime){
-        bedRange = band.bedtime;
-        var from = clockAt(band.bedtime[0], now), to = clockAt(band.bedtime[1], now);
+      if (band.hasBedtime){
+        bedRange = bedtimeRange();
+        var from = clockAt(bedRange[0], now), to = clockAt(bedRange[1], now);
         if (readyOpen <= to && readyClose >= from){
           open = new Date(Math.max(readyOpen.getTime(), from.getTime()));
           close = new Date(Math.min(readyClose.getTime(), to.getTime()));
@@ -840,14 +849,14 @@
         winEl.textContent = fmtDur(night.ms);
         stEl.textContent = 'usually ' + usualNight + (night.wakings ? ' · ' + plural(night.wakings, 'waking') : '');
         foot.textContent = 'Settle them back when you can, lights low and as little fuss as possible. ' +
-          'Wake windows are a daytime guide, so the app is not counting one now.';
+          'Wake windows are a daytime guide, so the app starts counting one again at ' + fmtClock(nightBounds().end) + '.';
         if (awake >= SPLIT_NIGHT_MS) renderSplitHint(win, night);
       } else {
         // Night hours, but they have not gone down yet: this is bedtime running
         // late, not a waking, so the reasons below would be the wrong ones.
         winEl.textContent = '—';
         stEl.textContent = 'not down yet';
-        foot.textContent = (band.bedtime ? 'Usual bedtime at ' + band.label + ' is ' + fmtRange(band.bedtime[0], band.bedtime[1]) + '. ' : '') +
+        foot.textContent = (band.hasBedtime ? 'Bedtime is ' + fmtRange(bedtimeRange()[0], bedtimeRange()[1]) + ', around the night start in Settings. ' : '') +
           'Night sleep at this age usually runs ' + usualNight + '.';
       }
       return;
@@ -868,7 +877,7 @@
       } else if (win.shift === 'early'){
         note = 'Earlier than the usual ' + usual + ', after a long stretch awake. ';
       } else {
-        note = 'Usual bedtime at ' + win.band.label + ' is ' + usual + '. ';
+        note = 'Bedtime is ' + usual + ', around the night start in Settings. ';
       }
     } else if (win.trimmedAt){
       note = 'Ends at ' + fmtTime(win.trimmedAt) + ', when night sleep starts. ';
