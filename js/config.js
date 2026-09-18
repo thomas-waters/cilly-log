@@ -25,5 +25,13 @@
   // sign-in, for looking at the interface without touching any database.
   var forceLocal = window.location.search.indexOf('store=local') >= 0;
 
-  window.CILLY_CONFIG = Object.assign({ env: env, forceLocal: forceLocal }, ENVIRONMENTS[env]);
+  // Sign-in is by Google only. The emailed magic link is disabled in Supabase
+  // (its free tier sends only a couple of messages an hour), so the app does
+  // not offer it. Set this back to true if that provider is turned on again.
+  var emailSignIn = false;
+
+  window.CILLY_CONFIG = Object.assign(
+    { env: env, forceLocal: forceLocal, emailSignIn: emailSignIn },
+    ENVIRONMENTS[env]
+  );
 })();
