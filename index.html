@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#5B54D6">
   <title>Cilly Log</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
-  <link rel="stylesheet" href="css/app.css?v=20260918-1311">
+  <link rel="stylesheet" href="css/app.css?v=20260918-1926">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -137,7 +137,7 @@
             <input type="time" id="set-night-end">
           </div>
         </div>
-        <p class="form-hint">A sleep that starts between these times counts as night sleep. The date of birth sets the nap window.</p>
+        <p class="form-hint">A sleep that starts between these times counts as night sleep, so the guide on the Sleep page calls it bedtime rather than a nap. The date of birth sets how long the window is.</p>
         <p class="form-error" id="set-error" hidden></p>
         <div class="form-actions">
           <button type="button" class="btn danger" id="sign-out" hidden>Sign out</button>
@@ -204,7 +204,7 @@
           <span class="wake-sub" id="wake-since"></span>
         </div>
         <div class="wake-block">
-          <span class="wake-label">Usual nap window</span>
+          <span class="wake-label" id="wake-window-label">Usual nap window</span>
           <span class="wake-value" id="wake-window">&mdash;</span>
           <span class="wake-state" id="wake-state"></span>
         </div>
@@ -511,8 +511,8 @@
 
 <div class="toast" id="toast" hidden></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/config.js?v=20260918-1311"></script>
-<script src="js/store.js?v=20260918-1311"></script>
-<script src="js/app.js?v=20260918-1311"></script>
+<script src="js/config.js?v=20260918-1926"></script>
+<script src="js/store.js?v=20260918-1926"></script>
+<script src="js/app.js?v=20260918-1926"></script>
 </body>
 </html>

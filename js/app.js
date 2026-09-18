@@ -80,6 +80,7 @@
   }
 
   function minutesOf(t){ var p = String(t || '').split(':'); return (Number(p[0]) || 0) * 60 + (Number(p[1]) || 0); }
+  function fmtClock(minutes){ var d = new Date(); d.setHours(0, minutes, 0, 0); return fmtTime(d); }
   function nightBounds(){
     var s = state.settings || {};
     return { start: minutesOf(s.nightStart || '19:00'), end: minutesOf(s.nightEnd || '06:00') };
@@ -87,6 +88,19 @@
   function isNight(e){
     var m = minutesOf(e.start), b = nightBounds();
     return b.start > b.end ? (m >= b.start || m < b.end) : (m >= b.start && m < b.end);
+  }
+  // Would a sleep starting at this moment count as night sleep?
+  function clockIsNight(d){
+    var m = d.getHours() * 60 + d.getMinutes(), b = nightBounds();
+    return b.start > b.end ? (m >= b.start || m < b.end) : (m >= b.start && m < b.end);
+  }
+  // The next time night sleep begins, at or after the given moment. Built from
+  // calendar parts rather than by adding 24 hours, so clock changes don't shift it.
+  function nextNightStart(from){
+    var b = nightBounds();
+    var d = new Date(from.getFullYear(), from.getMonth(), from.getDate(), 0, b.start, 0, 0);
+    if (d <= from) d = new Date(from.getFullYear(), from.getMonth(), from.getDate() + 1, 0, b.start, 0, 0);
+    return d;
   }
   // The evening a night sleep belongs to: an early-morning resettle counts toward the night before.
   function nightKey(e){
@@ -132,6 +146,36 @@
     var latest = null;
     state.entries.forEach(function(e){ var end = entryEnd(e); if (!latest || end > latest) latest = end; });
     return latest;
+  }
+
+  // When the next sleep is likely due, and what to call it. A sleep that would
+  // start during night hours is bedtime, not a nap, so the card says so rather
+  // than suggesting a nap at half eight in the evening. A daytime window that
+  // runs past night start is trimmed there for the same reason.
+  function sleepWindow(){
+    var last = lastWakeDate(), ww = wakeWindow();
+    if (!last || !ww) return null;
+    var open = new Date(last.getTime() + ww.min * 60000);
+    var close = new Date(last.getTime() + ww.max * 60000);
+    var b = nightBounds(), kind = 'nap', trimmedAt = null;
+    if (clockIsNight(open)){
+      var openMin = open.getHours() * 60 + open.getMinutes();
+      // Before midnight it is bedtime; in the small hours it is going back down.
+      kind = (b.start > b.end && openMin < b.end) ? 'next' : 'bed';
+    } else {
+      var nightAt = nextNightStart(open);
+      if (close > nightAt){
+        // Too near bedtime to be worth a nap, so treat the whole window as bedtime.
+        if (nightAt - open < 20 * 60000) kind = 'bed';
+        else { close = nightAt; trimmedAt = nightAt; }
+      }
+    }
+    return {
+      open: open, close: close, kind: kind, months: ww.months,
+      min: ww.min, max: ww.max, trimmedAt: trimmedAt,
+      label: kind === 'bed' ? 'Bedtime window' : kind === 'next' ? 'Next sleep window' : 'Usual nap window',
+      shortLabel: kind === 'bed' ? 'bedtime window' : kind === 'next' ? 'sleep window' : 'nap window'
+    };
   }
   function personName(record){
     var email = record && record.createdBy ? String(record.createdBy).toLowerCase() : '';
@@ -656,22 +700,27 @@
     var now = new Date();
     el('wake-timer').textContent = fmtDur(Math.max(0, now - last));
     el('wake-since').textContent = 'since ' + fmtTime(last);
-    var ww = wakeWindow();
-    var winEl = el('wake-window'), stEl = el('wake-state'), foot = el('wake-foot');
-    if (!ww){
+    var win = sleepWindow();
+    var labelEl = el('wake-window-label'), winEl = el('wake-window');
+    var stEl = el('wake-state'), foot = el('wake-foot');
+    if (!win){
+      labelEl.textContent = 'Usual nap window';
       winEl.textContent = '—';
       stEl.textContent = 'Add a date of birth in Settings';
       stEl.dataset.state = 'none';
       foot.textContent = '';
       return;
     }
-    var open = new Date(last.getTime() + ww.min * 60000);
-    var close = new Date(last.getTime() + ww.max * 60000);
-    winEl.textContent = fmtTime(open) + ' – ' + fmtTime(close);
-    if (now < open){ stEl.textContent = 'opens in ' + fmtDur(open - now); stEl.dataset.state = 'soon'; }
-    else if (now <= close){ stEl.textContent = 'open now'; stEl.dataset.state = 'open'; }
+    labelEl.textContent = win.label;
+    winEl.textContent = fmtTime(win.open) + ' – ' + fmtTime(win.close);
+    if (now < win.open){ stEl.textContent = 'opens in ' + fmtDur(win.open - now); stEl.dataset.state = 'soon'; }
+    else if (now <= win.close){ stEl.textContent = 'open now'; stEl.dataset.state = 'open'; }
     else { stEl.textContent = 'past the usual window'; stEl.dataset.state = 'past'; }
-    foot.textContent = 'Based on typical wake windows at ' + ww.months + ' months (' + fmtDur(ww.min * 60000) + '–' + fmtDur(ww.max * 60000) + '). A guide, not a rule.';
+    var b = nightBounds(), note = '';
+    if (win.kind === 'bed') note = 'Night sleep starts at ' + fmtClock(b.start) + '. ';
+    else if (win.kind === 'next') note = 'Still night until ' + fmtClock(b.end) + '. ';
+    else if (win.trimmedAt) note = 'Ends at ' + fmtTime(win.trimmedAt) + ', when night sleep starts. ';
+    foot.textContent = note + 'Based on typical wake windows at ' + win.months + ' months (' + fmtDur(win.min * 60000) + '–' + fmtDur(win.max * 60000) + '). A guide, not a rule.';
   }
 
   function sleepRowHtml(e){
@@ -1437,8 +1486,8 @@
       var last = lastWakeDate();
       if (last){
         sub = 'Awake ' + fmtDur(Date.now() - last.getTime());
-        var ww = wakeWindow();
-        if (ww) sub += ' · nap window from ' + fmtTime(new Date(last.getTime() + ww.min * 60000));
+        var win = sleepWindow();
+        if (win) sub += ' · ' + win.shortLabel + ' from ' + fmtTime(win.open);
       } else {
         sub = 'Nothing logged yet';
       }
