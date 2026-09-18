@@ -125,7 +125,8 @@
     padding:10px 14px;
     border-radius:10px;
     box-shadow:var(--shadow);
-    z-index:20;
+    /* Above the overlays, so a save is confirmed as the form closes. */
+    z-index:40;
   }
 
   .wake-card{
@@ -328,6 +329,13 @@
     color:var(--accent);
     flex:none;
   }
+
+  /* Milk and solids open their form from a card shaped like the sleep one,
+     so every page is tapped the same way. */
+  .action-card .status-icon{ background:var(--accent-soft); color:var(--accent); }
+  .action-card .status-btn{ padding:18px 20px; }
+  .action-card .status-icon{ width:48px; height:48px; }
+  .action-card .status-icon svg{ width:24px; height:24px; }
 
   .stats-row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   .stat-tile{
@@ -674,6 +682,13 @@
   }
   .overlay-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
   .overlay-head h2{ margin:0; }
+  /* The delete check opens over whatever form asked for it. */
+  .overlay-top{ z-index:35; }
+  .confirm-panel{ max-width:360px; display:flex; flex-direction:column; gap:14px; }
+  .confirm-text{ margin:0; font-size:0.9rem; line-height:1.5; color:var(--ink-soft); }
+  /* Deleting is the point of this dialog, so the red button sits where the
+     save button normally does and is filled rather than tinted. */
+  .confirm-panel .btn.danger{ margin-right:0; background:var(--danger); color:var(--bg); }
 
   #m-bottle-fields{ display:flex; flex-direction:column; gap:10px; }
   #m-amount-chips{ margin-top:0; }
