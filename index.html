@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#5B54D6">
   <title>Cilly Log</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
-  <link rel="stylesheet" href="css/app.css?v=20260918-2314">
+  <link rel="stylesheet" href="css/app.css?v=20260918-2336">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -146,6 +146,9 @@
             <button type="button" class="unit-btn" data-basis="age" aria-pressed="false">Typical for age</button>
           </div>
           <p class="form-hint" id="set-bedtime-hint"></p>
+        </div>
+        <div class="field">
+          <button type="button" class="btn ghost" id="changelog-btn">Change log</button>
         </div>
         <p class="form-error" id="set-error" hidden></p>
         <div class="form-actions">
@@ -576,6 +579,20 @@
     </section>
   </section>
 
+  <!-- Opened from Settings, over it. -->
+  <div class="overlay overlay-top" id="changelog-overlay" hidden>
+    <section class="panel overlay-panel" role="dialog" aria-modal="true" aria-labelledby="changelog-title">
+      <div class="overlay-head">
+        <h2 id="changelog-title">Change log</h2>
+        <button type="button" class="head-btn" id="changelog-close" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="changelog" id="changelog-list"></div>
+      <p class="form-hint" id="changelog-build"></p>
+    </section>
+  </div>
+
   <!-- Asked before anything is deleted. Sits outside the views so it can open
        over whichever form is on screen. -->
   <div class="overlay overlay-top writer-only" id="confirm-overlay" hidden>
@@ -598,9 +615,10 @@
 
 <div class="toast" id="toast" hidden></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/config.js?v=20260918-2314"></script>
-<script src="js/store.js?v=20260918-2314"></script>
-<script src="js/sleep-model.js?v=20260918-2314"></script>
-<script src="js/app.js?v=20260918-2314"></script>
+<script src="js/config.js?v=20260918-2336"></script>
+<script src="js/store.js?v=20260918-2336"></script>
+<script src="js/changelog.js?v=20260918-2336"></script>
+<script src="js/sleep-model.js?v=20260918-2336"></script>
+<script src="js/app.js?v=20260918-2336"></script>
 </body>
 </html>

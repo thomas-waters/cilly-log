@@ -38,6 +38,9 @@ It holds real family records: treat the live data with care.
 - `main` is the live app: https://thomas-waters.github.io/cilly-log/ via
   GitHub Pages. Every push to `main` goes live within a minute — treat a push
   to `main` as a release.
+- Every release adds an entry at the top of `js/changelog.js`, in the same
+  change that ships it: bump the version, date it, and write what a parent
+  will notice. Settings → Change log shows that list and the running build.
 - `staging` (when present) deploys to `…/cilly-log/staging/` and points at a
   separate Supabase project with throwaway data. Try features there first.
 - Repo: `thomas-waters/cilly-log` (public). Never commit anything under
