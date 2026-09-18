@@ -123,23 +123,15 @@
     if (at.getDate() < dob.getDate()) months--;
     return Math.max(0, months);
   }
-  var WAKE_WINDOWS = [
-    { from: 0, to: 1, min: 45, max: 60 }, { from: 1, to: 2, min: 45, max: 75 }, { from: 2, to: 3, min: 60, max: 90 },
-    { from: 3, to: 4, min: 75, max: 120 }, { from: 4, to: 6, min: 90, max: 150 }, { from: 6, to: 7, min: 120, max: 180 },
-    { from: 7, to: 9, min: 150, max: 210 }, { from: 9, to: 12, min: 180, max: 240 }, { from: 12, to: 15, min: 180, max: 300 },
-    { from: 15, to: 18, min: 300, max: 360 }, { from: 18, to: 24, min: 300, max: 420 }, { from: 24, to: 999, min: 360, max: 480 }
-  ];
-  function wakeWindow(){
+  // Age ranges live in js/sleep-model.js, with their sources.
+  var MODEL = window.CillySleepModel;
+  function currentAge(){
     var s = state.settings || {};
-    if (!s.dob) return null;
+    if (!s.dob || !MODEL) return null;
     var months = ageMonths(s.dob, new Date());
     if (months === null) return null;
-    var row = null;
-    for (var i = 0; i < WAKE_WINDOWS.length; i++){
-      if (months >= WAKE_WINDOWS[i].from && months < WAKE_WINDOWS[i].to){ row = WAKE_WINDOWS[i]; break; }
-    }
-    if (!row) row = WAKE_WINDOWS[WAKE_WINDOWS.length - 1];
-    return { months: months, min: row.min, max: row.max };
+    var band = MODEL.bandFor(months);
+    return band ? { months: months, band: band } : null;
   }
   function lastWakeDate(){
     if (state.status.asleep || !state.entries.length) return null;
@@ -148,33 +140,102 @@
     return latest;
   }
 
-  // When the next sleep is likely due, and what to call it. A sleep that would
-  // start during night hours is bedtime, not a nap, so the card says so rather
-  // than suggesting a nap at half eight in the evening. A daytime window that
-  // runs past night start is trimmed there for the same reason.
-  function sleepWindow(){
-    var last = lastWakeDate(), ww = wakeWindow();
-    if (!last || !ww) return null;
-    var open = new Date(last.getTime() + ww.min * 60000);
-    var close = new Date(last.getTime() + ww.max * 60000);
-    var b = nightBounds(), kind = 'nap', trimmedAt = null;
-    if (clockIsNight(open)){
-      var openMin = open.getHours() * 60 + open.getMinutes();
-      // Before midnight it is bedtime; in the small hours it is going back down.
-      kind = (b.start > b.end && openMin < b.end) ? 'next' : 'bed';
-    } else {
-      var nightAt = nextNightStart(open);
-      if (close > nightAt){
-        // Too near bedtime to be worth a nap, so treat the whole window as bedtime.
-        if (nightAt - open < 20 * 60000) kind = 'bed';
-        else { close = nightAt; trimmedAt = nightAt; }
-      }
+  // Naps on a given day, and when the last one ended.
+  function napsOn(key){
+    var ms = 0, count = 0, lastEnd = null;
+    state.entries.forEach(function(e){
+      if (isNight(e) || e.date !== key) return;
+      var end = entryEnd(e);
+      ms += end - entryStart(e);
+      count++;
+      if (!lastEnd || end > lastEnd) lastEnd = end;
+    });
+    return { ms: ms, count: count, lastEnd: lastEnd };
+  }
+  function napsToday(){ return napsOn(dateKey(new Date())); }
+
+  // The night in progress: after night start that is tonight, and in the small
+  // hours it still belongs to yesterday evening.
+  function currentNightKey(){
+    var now = new Date(), b = nightBounds();
+    var m = now.getHours() * 60 + now.getMinutes();
+    if (b.start > b.end && m < b.end){
+      var d = new Date(now); d.setDate(d.getDate() - 1); return dateKey(d);
     }
+    return dateKey(now);
+  }
+  function nightSoFar(){
+    var key = currentNightKey(), ms = 0, sleeps = 0, start = null;
+    state.entries.forEach(function(e){
+      if (!isNight(e) || nightKey(e) !== key) return;
+      ms += entryEnd(e) - entryStart(e);
+      sleeps++;
+      var s = entryStart(e);
+      if (!start || s < start) start = s;
+    });
+    return { key: key, ms: ms, sleeps: sleeps, start: start, wakings: Math.max(0, sleeps - 1) };
+  }
+
+  function clockAt(minutes, reference){
+    var d = reference ? new Date(reference.getTime()) : new Date();
+    d.setHours(0, minutes, 0, 0);
+    return d;
+  }
+  function fmtRange(fromMin, toMin){ return fmtClock(fromMin) + ' – ' + fmtClock(toMin); }
+
+  var POSITION_WORDS = { first: 'before the first nap', mid: 'between naps', last: 'before bed' };
+
+  // When the next sleep is likely due, and what to call it.
+  //
+  // Wake windows describe the day only, so during night hours this returns
+  // kind 'night' and no times at all: a baby who wakes at 2am should go back
+  // down, not wait out a three-hour window.
+  //
+  // For the last sleep of the day the age band's bedtime range leads and the
+  // wake window adjusts it, rather than the other way round. Adding a wake
+  // window to a late nap is what used to push bedtime past eight o'clock.
+  function sleepWindow(){
+    var last = lastWakeDate(), age = currentAge();
+    if (!last || !age) return null;
+    var now = new Date(), band = age.band;
+    if (clockIsNight(now)) return { kind: 'night', months: age.months, band: band };
+
+    var naps = napsToday();
+    var expected = band.naps[1];
+    var position = naps.count === 0 ? 'first' : (naps.count >= expected ? 'last' : 'mid');
+    var gap = MODEL.wakeGap(band, position);
+    var readyOpen = new Date(last.getTime() + gap[0] * 60000);
+    var readyClose = new Date(last.getTime() + gap[1] * 60000);
+    var open = readyOpen, close = readyClose;
+    var nightAt = nextNightStart(now);
+    var kind = 'nap', trimmedAt = null, shift = '', bedRange = null;
+
+    // The next sleep is the night if no naps are left, or if the window lands
+    // in night hours, or if it leaves too little of the day to be worth a nap.
+    if (position === 'last' || readyOpen >= nightAt || nightAt - readyOpen < 20 * 60000){
+      kind = 'bed';
+      if (band.bedtime){
+        bedRange = band.bedtime;
+        var from = clockAt(band.bedtime[0], now), to = clockAt(band.bedtime[1], now);
+        if (readyOpen <= to && readyClose >= from){
+          open = new Date(Math.max(readyOpen.getTime(), from.getTime()));
+          close = new Date(Math.min(readyClose.getTime(), to.getTime()));
+        } else if (readyOpen > to){
+          shift = 'late'; open = to; close = readyOpen;
+        } else {
+          shift = 'early'; open = readyOpen; close = from;
+        }
+      }
+    } else if (readyClose > nightAt){
+      close = nightAt; trimmedAt = nightAt;
+    }
+
     return {
-      open: open, close: close, kind: kind, months: ww.months,
-      min: ww.min, max: ww.max, trimmedAt: trimmedAt,
-      label: kind === 'bed' ? 'Bedtime window' : kind === 'next' ? 'Next sleep window' : 'Usual nap window',
-      shortLabel: kind === 'bed' ? 'bedtime window' : kind === 'next' ? 'sleep window' : 'nap window'
+      open: open, close: close, kind: kind, months: age.months, band: band,
+      position: position, gap: gap, naps: naps, trimmedAt: trimmedAt,
+      shift: shift, bedRange: bedRange,
+      label: kind === 'bed' ? 'Bedtime window' : 'Usual nap window',
+      shortLabel: kind === 'bed' ? 'bedtime' : 'nap window'
     };
   }
   function personName(record){
@@ -504,12 +565,62 @@
       summaryTile('Meals a day', thisWeek.mealsPerDay ? Math.round(thisWeek.mealsPerDay * 10) / 10 : '—', thisWeek.mealsPerDay, lastWeek.mealsPerDay, meals, thisWeek.mealsDays);
 
     renderDayTable();
+    renderNorms();
     el('print-heading').textContent = 'Cilly Log — 7 days to ' +
       new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
     var sub = thisWeek.sleepPerDayMs ? fmtDur(thisWeek.sleepPerDayMs) + ' sleep a day this week' : 'Nothing logged this week';
     if (thisWeek.feedsPerDay) sub += ' · ' + perDay(thisWeek.feedsPerDay) + ' feeds';
     el('home-summary-sub').textContent = sub;
+  }
+
+  // How the last 7 days sit against the ranges for their age. These are
+  // population ranges, not targets, and the note under the table says so.
+  function renderNorms(){
+    var panel = el('norms-panel'), age = currentAge();
+    if (!age){ panel.hidden = true; return; }
+    panel.hidden = false;
+    var band = age.band;
+
+    var set = {};
+    dayKeysEndingToday(0, 7).forEach(function(k){ set[k] = true; });
+    var night = {}, day = {}, naps = {}, total = {};
+    state.entries.forEach(function(e){
+      var key = sleepDayKey(e);
+      if (!set[key]) return;
+      var dur = entryEnd(e) - entryStart(e);
+      total[key] = (total[key] || 0) + dur;
+      if (isNight(e)) night[key] = (night[key] || 0) + dur;
+      else { day[key] = (day[key] || 0) + dur; naps[key] = (naps[key] || 0) + 1; }
+    });
+
+    function row(label, avg, low, high, format){
+      var usual = low === high ? format(low) : format(low) + ' – ' + format(high);
+      if (!avg) return '<tr><td>' + label + '</td><td>—</td><td>' + usual + '</td><td>—</td></tr>';
+      var flag = avg < low ? ['down', 'below'] : avg > high ? ['up', 'above'] : ['', 'in range'];
+      return '<tr>' +
+        '<td>' + label + '</td>' +
+        '<td>' + format(avg) + '</td>' +
+        '<td>' + usual + '</td>' +
+        '<td><span class="norm-flag"' + (flag[0] ? ' data-dir="' + flag[0] + '"' : '') + '>' + flag[1] + '</span></td>' +
+      '</tr>';
+    }
+    var hours = function(ms){ return fmtDur(ms); };
+    var count = function(n){ return Math.round(n * 10) / 10; };
+    var mins = function(m){ return m * 60000; };
+
+    el('norms-age').textContent = band.label;
+    el('norms-table').innerHTML =
+      '<thead><tr><th>Sleep</th><th>Average</th><th>Usual at this age</th><th></th></tr></thead><tbody>' +
+      row('Night', averageOver(night).avg, mins(band.nightSleep[0]), mins(band.nightSleep[1]), hours) +
+      row('Naps', averageOver(day).avg, mins(band.daySleep[0]), mins(band.daySleep[1]), hours) +
+      row('Total in 24h', averageOver(total).avg, mins(band.total[0]), mins(band.total[1]), hours) +
+      row('Naps a day', averageOver(naps).avg, band.naps[0], band.naps[1], count) +
+      '</tbody>';
+
+    el('norms-note').textContent = (band.note ? band.note + ' ' : '') +
+      MODEL.sources + ' Every baby is different, and a week outside a range is not a problem by itself ' +
+      '— it is a question for your health visitor or GP, not a verdict.';
   }
 
   function renderDayTable(){
@@ -692,17 +803,24 @@
     }
   }
 
+  // How long a night waking runs before the app offers possible reasons.
+  var SPLIT_NIGHT_MS = 45 * 60000;
+
   function renderWakeCard(){
     var card = el('wake-card');
     var last = lastWakeDate();
     if (!last){ card.hidden = true; return; }
     card.hidden = false;
-    var now = new Date();
-    el('wake-timer').textContent = fmtDur(Math.max(0, now - last));
+    var now = new Date(), awake = Math.max(0, now - last);
+    el('wake-timer').textContent = fmtDur(awake);
     el('wake-since').textContent = 'since ' + fmtTime(last);
+
     var win = sleepWindow();
     var labelEl = el('wake-window-label'), winEl = el('wake-window');
-    var stEl = el('wake-state'), foot = el('wake-foot');
+    var stEl = el('wake-state'), foot = el('wake-foot'), hint = el('wake-hint');
+    hint.hidden = true;
+    card.dataset.mode = win ? win.kind : 'none';
+
     if (!win){
       labelEl.textContent = 'Usual nap window';
       winEl.textContent = '—';
@@ -711,16 +829,65 @@
       foot.textContent = '';
       return;
     }
+
+    // At night there is no window to count down to: they should go back down.
+    if (win.kind === 'night'){
+      var band = win.band, night = nightSoFar();
+      labelEl.textContent = 'Night so far';
+      winEl.textContent = night.ms ? fmtDur(night.ms) : '—';
+      stEl.dataset.state = 'night';
+      stEl.textContent = night.ms
+        ? 'usually ' + fmtDur(band.nightSleep[0] * 60000) + '–' + fmtDur(band.nightSleep[1] * 60000) +
+          (night.wakings ? ' · ' + plural(night.wakings, 'waking') : '')
+        : 'nothing logged for tonight yet';
+      foot.textContent = 'Settle them back when you can, lights low and as little fuss as possible. ' +
+        'Wake windows are a daytime guide, so the app is not counting one now.';
+      if (awake >= SPLIT_NIGHT_MS) renderSplitHint(win, night);
+      return;
+    }
+
     labelEl.textContent = win.label;
     winEl.textContent = fmtTime(win.open) + ' – ' + fmtTime(win.close);
     if (now < win.open){ stEl.textContent = 'opens in ' + fmtDur(win.open - now); stEl.dataset.state = 'soon'; }
     else if (now <= win.close){ stEl.textContent = 'open now'; stEl.dataset.state = 'open'; }
     else { stEl.textContent = 'past the usual window'; stEl.dataset.state = 'past'; }
-    var b = nightBounds(), note = '';
-    if (win.kind === 'bed') note = 'Night sleep starts at ' + fmtClock(b.start) + '. ';
-    else if (win.kind === 'next') note = 'Still night until ' + fmtClock(b.end) + '. ';
-    else if (win.trimmedAt) note = 'Ends at ' + fmtTime(win.trimmedAt) + ', when night sleep starts. ';
-    foot.textContent = note + 'Based on typical wake windows at ' + win.months + ' months (' + fmtDur(win.min * 60000) + '–' + fmtDur(win.max * 60000) + '). A guide, not a rule.';
+
+    var note = '';
+    if (win.kind === 'bed' && win.bedRange){
+      var usual = fmtRange(win.bedRange[0], win.bedRange[1]);
+      if (win.shift === 'late'){
+        note = 'Later than the usual ' + usual +
+          (win.naps.lastEnd ? ', because the last nap ended at ' + fmtTime(win.naps.lastEnd) : '') + '. ';
+      } else if (win.shift === 'early'){
+        note = 'Earlier than the usual ' + usual + ', after a long stretch awake. ';
+      } else {
+        note = 'Usual bedtime at ' + win.band.label + ' is ' + usual + '. ';
+      }
+    } else if (win.trimmedAt){
+      note = 'Ends at ' + fmtTime(win.trimmedAt) + ', when night sleep starts. ';
+    }
+    var gapRange = fmtDur(win.gap[0] * 60000) + '–' + fmtDur(win.gap[1] * 60000);
+    foot.textContent = note
+      ? note + 'Usual gap ' + POSITION_WORDS[win.position] + ': ' + gapRange + '. A guide, not a rule.'
+      : 'The gap ' + POSITION_WORDS[win.position] + ' at ' + win.band.label + ' is usually ' + gapRange + '. A guide, not a rule.';
+  }
+
+  // A long night waking usually has a daytime cause. Rather than guess, show
+  // what was actually logged for the day this night belongs to.
+  function renderSplitHint(win, night){
+    var hint = el('wake-hint'), band = win.band;
+    var naps = napsOn(night.key), facts = [];
+    if (naps.ms){
+      var over = naps.ms > band.daySleep[1] * 60000;
+      facts.push(plural(naps.count, 'nap') + ' totalling ' + fmtDur(naps.ms) +
+        (over ? ' (usually ' + fmtDur(band.daySleep[0] * 60000) + '–' + fmtDur(band.daySleep[1] * 60000) + ')' : ''));
+    }
+    if (naps.lastEnd) facts.push('last nap ended at ' + fmtTime(naps.lastEnd));
+    if (night.start) facts.push('down for the night at ' + fmtTime(night.start));
+    hint.textContent = 'A long night waking often follows too much day sleep, ' +
+      'a late last nap, or a bedtime that did not fit.' +
+      (facts.length ? ' ' + friendlyDate(night.key) + ': ' + facts.join(', ') + '.' : '');
+    hint.hidden = false;
   }
 
   function sleepRowHtml(e){
@@ -1487,7 +1654,8 @@
       if (last){
         sub = 'Awake ' + fmtDur(Date.now() - last.getTime());
         var win = sleepWindow();
-        if (win) sub += ' · ' + win.shortLabel + ' from ' + fmtTime(win.open);
+        if (win && win.kind === 'night') sub += ' · settle them back when you can';
+        else if (win) sub += ' · ' + win.shortLabel + ' from ' + fmtTime(win.open);
       } else {
         sub = 'Nothing logged yet';
       }

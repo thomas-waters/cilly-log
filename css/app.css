@@ -149,6 +149,18 @@
   .wake-state[data-state="open"]{ color:var(--accent); }
   .wake-state[data-state="past"]{ color:var(--warn); }
   .wake-foot{ margin:0; font-size:0.72rem; color:var(--ink-soft); }
+  .wake-state[data-state="night"]{ color:var(--ink-soft); }
+  .wake-hint{
+    margin:0;
+    background:var(--warn-soft);
+    border:1px solid var(--warn);
+    border-radius:12px;
+    padding:10px 12px;
+    font-size:0.78rem;
+    line-height:1.45;
+  }
+  .norm-flag{ font-size:0.78rem; color:var(--ink-soft); }
+  .norm-flag[data-dir="up"], .norm-flag[data-dir="down"]{ color:var(--warn); font-weight:600; }
   .chart-legend{ display:flex; gap:14px; font-size:0.75rem; color:var(--ink-soft); }
   .legend-swatch{ display:inline-block; width:10px; height:10px; border-radius:3px; background:var(--accent); margin-right:6px; vertical-align:-1px; }
   .legend-swatch.naps{ opacity:.45; }
