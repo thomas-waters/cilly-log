@@ -149,6 +149,18 @@
   .wake-state[data-state="open"]{ color:var(--accent); }
   .wake-state[data-state="past"]{ color:var(--warn); }
   .wake-foot{ margin:0; font-size:0.72rem; color:var(--ink-soft); }
+  .wake-state[data-state="night"]{ color:var(--ink-soft); }
+  .wake-hint{
+    margin:0;
+    background:var(--warn-soft);
+    border:1px solid var(--warn);
+    border-radius:12px;
+    padding:10px 12px;
+    font-size:0.78rem;
+    line-height:1.45;
+  }
+  .norm-flag{ font-size:0.78rem; color:var(--ink-soft); }
+  .norm-flag[data-dir="up"], .norm-flag[data-dir="down"]{ color:var(--warn); font-weight:600; }
   .chart-legend{ display:flex; gap:14px; font-size:0.75rem; color:var(--ink-soft); }
   .legend-swatch{ display:inline-block; width:10px; height:10px; border-radius:3px; background:var(--accent); margin-right:6px; vertical-align:-1px; }
   .legend-swatch.naps{ opacity:.45; }
@@ -386,7 +398,10 @@
   }
   form{ display:flex; flex-direction:column; gap:12px; }
   .field{ display:flex; flex-direction:column; gap:5px; }
-  .field label{ font-size:0.8rem; color:var(--ink-soft); font-weight:500; }
+  .field label, .field-label{ font-size:0.8rem; color:var(--ink-soft); font-weight:500; }
+  /* A toggle on its own line, so two wordy options still fit a phone. */
+  .basis-toggle{ align-self:stretch; }
+  .basis-toggle .unit-btn{ flex:1; padding:6px 8px; }
   .row{ display:flex; gap:10px; align-items:flex-end; }
   .row > .field, .row > input{ flex:1; min-width:0; }
   .chips{ display:flex; flex-wrap:wrap; gap:6px; margin-top:-4px; }

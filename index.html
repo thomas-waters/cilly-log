@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#5B54D6">
   <title>Cilly Log</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
-  <link rel="stylesheet" href="css/app.css?v=20260918-1926">
+  <link rel="stylesheet" href="css/app.css?v=20260918-2240">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -137,7 +137,16 @@
             <input type="time" id="set-night-end">
           </div>
         </div>
-        <p class="form-hint">A sleep that starts between these times counts as night sleep, so the guide on the Sleep page calls it bedtime rather than a nap. The date of birth sets how long the window is.</p>
+        <p class="form-hint">A sleep that starts between these times counts as night sleep. The date of birth sets how long the gaps between sleeps are.</p>
+
+        <div class="field">
+          <span class="field-label" id="set-bedtime-label">Aim bedtime at</span>
+          <div class="unit-toggle basis-toggle" id="set-bedtime-basis" role="group" aria-labelledby="set-bedtime-label">
+            <button type="button" class="unit-btn" data-basis="night" aria-pressed="true">My night start</button>
+            <button type="button" class="unit-btn" data-basis="age" aria-pressed="false">Typical for age</button>
+          </div>
+          <p class="form-hint" id="set-bedtime-hint"></p>
+        </div>
         <p class="form-error" id="set-error" hidden></p>
         <div class="form-actions">
           <button type="button" class="btn danger" id="sign-out" hidden>Sign out</button>
@@ -210,6 +219,7 @@
         </div>
       </div>
       <p class="wake-foot" id="wake-foot"></p>
+      <p class="wake-hint" id="wake-hint" hidden></p>
     </section>
 
     <section class="stats-row" aria-label="Sleep totals">
@@ -476,6 +486,17 @@
 
     <section class="summary-grid" id="summary-grid" aria-label="This week compared with last week"></section>
 
+    <section class="panel" id="norms-panel" aria-label="How this compares with his age" hidden>
+      <div class="panel-head">
+        <h2>Usual for his age</h2>
+        <span class="chart-range" id="norms-age"></span>
+      </div>
+      <div class="table-wrap">
+        <table class="day-table" id="norms-table"></table>
+      </div>
+      <p class="form-hint" id="norms-note"></p>
+    </section>
+
     <section class="panel" aria-label="Day by day">
       <div class="panel-head">
         <h2>Day by day</h2>
@@ -511,8 +532,9 @@
 
 <div class="toast" id="toast" hidden></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/config.js?v=20260918-1926"></script>
-<script src="js/store.js?v=20260918-1926"></script>
-<script src="js/app.js?v=20260918-1926"></script>
+<script src="js/config.js?v=20260918-2240"></script>
+<script src="js/store.js?v=20260918-2240"></script>
+<script src="js/sleep-model.js?v=20260918-2240"></script>
+<script src="js/app.js?v=20260918-2240"></script>
 </body>
 </html>

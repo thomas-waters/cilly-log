@@ -13,7 +13,9 @@
   function emptyState(){
     return {
       status: { asleep: false, since: null, settleNotes: '', putDown: '' },
-      settings: { dob: '', nightStart: '19:00', nightEnd: '06:00', milkUnit: 'ml' },
+      // bedtimeBasis: 'night' aims bedtime at nightStart, 'age' at the
+      // published range for the age band. See bedtimeRange in js/app.js.
+      settings: { dob: '', nightStart: '19:00', nightEnd: '06:00', milkUnit: 'ml', bedtimeBasis: 'night' },
       entries: [],
       feeds: [],
       solids: [],

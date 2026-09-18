@@ -7,15 +7,26 @@ It holds real family records: treat the live data with care.
 
 - Plain HTML/CSS/JS, no build step. `index.html` is the shell, `css/app.css`
   the styles, `js/app.js` the app, `js/store.js` the storage adapters,
-  `js/config.js` the public client config.
+  `js/config.js` the public client config, and `js/sleep-model.js` the
+  by-age sleep ranges the guide is built on.
 - Data lives in Supabase (project `hopvsalkhtgrqbbkioqn`), schema in
   `supabase/schema.sql`. Access is row-level security: only emails in
-  `allowed_users` can read or write. Sign-in is an emailed magic link.
+  `allowed_users` can read or write. Sign-in is Google only; the emailed
+  magic link is disabled in Supabase and hidden behind `emailSignIn` in
+  `js/config.js`.
 - State changes are expressed as ops (`upsert`, `delete`, `status`,
   `settings`) applied to an in-memory state and persisted through the store;
   see `applyOps` and `commit` in `js/app.js`. Keep new features on that model.
-- Night sleep vs naps, the nap-window guide and time-to-settle are all
-  computed from settings stored in the database, not hard-coded.
+- Night sleep vs naps, the sleep guide and time-to-settle are all computed
+  from settings stored in the database plus `js/sleep-model.js`, not
+  hard-coded in the views. Wake windows in that model describe the day only:
+  during night hours the app shows night sleep so far and says to settle
+  them back, never a countdown. Keep it that way — a wake window is not a
+  model of a 2am waking.
+- Bedtime comes from the `bedtimeBasis` setting: `night` (the default) puts
+  it half an hour either side of the night start, `age` uses the band's own
+  range. Any new clock time the guide shows should come from one of those
+  two, not from a constant.
 
 ## Branches and deploys
 

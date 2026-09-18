@@ -49,6 +49,21 @@ def who(name):
     return f"(select email from public.allowed_users where display_name = '{name}')"
 
 
+NOW_MIN = datetime.datetime.now().hour * 60 + datetime.datetime.now().minute
+
+
+def already_happened(back, hhmm):
+    """Today only gets rows that have already finished.
+
+    Otherwise the seed logs tonight's sleep before it happens, and the app
+    reads it as a night that is already over.
+    """
+    if back != 0:
+        return True
+    hour, minute = (int(x) for x in hhmm.split(":"))
+    return hour * 60 + minute <= NOW_MIN
+
+
 def main():
     random.seed(17)
     today = datetime.date.today()
@@ -70,11 +85,14 @@ def main():
         parent = "Dad" if back % 2 else "Mum"
         other = "Mum" if back % 2 else "Dad"
 
-        # Night sleep, occasionally broken by a waking.
+        # Night sleep, occasionally broken by a waking. Tonight has not
+        # happened yet, so today never gets one.
         bed_min = random.choice([0, 5, 10, 15, 20])
         wake_min = random.choice([0, 5, 10, 15])
         broken = back % 4 == 1
-        if broken:
+        if back == 0:
+            pass
+        elif broken:
             lines.append(
                 f"insert into public.sleeps (id, date, start_time, end_time, put_down, settle_notes, wake_notes, created_by) values "
                 f"('seed-{tag}-n1', '{tag}', '19:{bed_min:02d}', '01:{wake_min:02d}', '18:{45 + (bed_min % 10):02d}', "
@@ -93,16 +111,21 @@ def main():
             )
 
         # Naps: the morning one always, the afternoon one most days.
-        lines.append(
-            f"insert into public.sleeps (id, date, start_time, end_time, put_down, settle_notes, wake_notes, created_by) values "
-            f"('seed-{tag}-d1', '{tag}', '09:{random.choice([15, 25, 35]):02d}', '10:{random.choice([30, 40, 50]):02d}', "
-            f"'09:{random.choice([5, 10, 20]):02d}', '', '', {who(other)});"
-        )
-        if back % 5 != 3:
+        d1_start = f"09:{random.choice([15, 25, 35]):02d}"
+        d1_end = f"10:{random.choice([30, 40, 50]):02d}"
+        d1_down = f"09:{random.choice([5, 10, 20]):02d}"
+        if already_happened(back, d1_end):
             lines.append(
                 f"insert into public.sleeps (id, date, start_time, end_time, put_down, settle_notes, wake_notes, created_by) values "
-                f"('seed-{tag}-d2', '{tag}', '13:{random.choice([20, 30, 45]):02d}', '14:{random.choice([40, 55]):02d}', "
-                f"'13:{random.choice([10, 15, 25]):02d}', '', '', {who(parent)});"
+                f"('seed-{tag}-d1', '{tag}', '{d1_start}', '{d1_end}', '{d1_down}', '', '', {who(other)});"
+            )
+        d2_start = f"13:{random.choice([20, 30, 45]):02d}"
+        d2_end = f"14:{random.choice([40, 55]):02d}"
+        d2_down = f"13:{random.choice([10, 15, 25]):02d}"
+        if back % 5 != 3 and already_happened(back, d2_end):
+            lines.append(
+                f"insert into public.sleeps (id, date, start_time, end_time, put_down, settle_notes, wake_notes, created_by) values "
+                f"('seed-{tag}-d2', '{tag}', '{d2_start}', '{d2_end}', '{d2_down}', '', '', {who(parent)});"
             )
 
         # Feeds: mostly breast, one bottle on most days.
@@ -111,24 +134,30 @@ def main():
             bottle = index == 3 and back % 3 != 0
             kind = "bottle" if bottle else "breast"
             amount = random.choice([150, 180, 210]) if bottle else None
+            notes = random.choice(NOTES_FEED)
+            if not already_happened(back, time):
+                continue
             lines.append(
                 f"insert into public.feeds (id, date, time, kind, amount_ml, notes, created_by) values "
                 f"('seed-{tag}-f{index}', '{tag}', '{time}', '{kind}', "
-                f"{amount if amount is not None else 'null'}, {sql_text(random.choice(NOTES_FEED))}, "
+                f"{amount if amount is not None else 'null'}, {sql_text(notes)}, "
                 f"{who(parent if index % 2 else other)});"
             )
 
         # Solids: lunch every day, tea most days.
-        lines.append(
-            f"insert into public.solids (id, date, time, foods, notes, created_by) values "
-            f"('seed-{tag}-s1', '{tag}', '12:00', {sql_text(str(random.choice(FOODS)).replace(chr(39), chr(34)))}::jsonb, "
-            f"'', {who(other)});"
-        )
-        if back % 3 != 2:
+        lunch = str(random.choice(FOODS)).replace(chr(39), chr(34))
+        if already_happened(back, "12:00"):
             lines.append(
                 f"insert into public.solids (id, date, time, foods, notes, created_by) values "
-                f"('seed-{tag}-s2', '{tag}', '17:00', {sql_text(str(random.choice(FOODS)).replace(chr(39), chr(34)))}::jsonb, "
-                f"{sql_text(random.choice(['', '', 'Loved it.', 'Not interested today.']))}, {who(parent)});"
+                f"('seed-{tag}-s1', '{tag}', '12:00', {sql_text(lunch)}::jsonb, '', {who(other)});"
+            )
+        tea = str(random.choice(FOODS)).replace(chr(39), chr(34))
+        tea_notes = random.choice(['', '', 'Loved it.', 'Not interested today.'])
+        if back % 3 != 2 and already_happened(back, "17:00"):
+            lines.append(
+                f"insert into public.solids (id, date, time, foods, notes, created_by) values "
+                f"('seed-{tag}-s2', '{tag}', '17:00', {sql_text(tea)}::jsonb, "
+                f"{sql_text(tea_notes)}, {who(parent)});"
             )
 
     lines += [

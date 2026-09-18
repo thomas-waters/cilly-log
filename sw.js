@@ -6,13 +6,14 @@
  * Requests to other origins (the database, fonts) are never cached here.
  * Bump VERSION when the precache list changes.
  */
-var VERSION = 'cilly-log-20260918-1926';
+var VERSION = 'cilly-log-20260918-2240';
 var PRECACHE = [
   './',
   './index.html',
   './css/app.css',
   './js/config.js',
   './js/store.js',
+  './js/sleep-model.js',
   './js/app.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
