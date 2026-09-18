@@ -328,7 +328,9 @@
   // Every form opens over the page rather than further down it, so the shape
   // is the same wherever you are: tap the card at the top, fill it in, done.
   // Each one lives inside its own view, so only the current view's can show.
-  var OVERLAYS = ['settings-overlay', 'entry-overlay', 'milk-overlay', 'solid-overlay'];
+  // The confirm is first: it opens over the others, so Escape should reach it
+  // before the form underneath.
+  var OVERLAYS = ['confirm-overlay', 'settings-overlay', 'entry-overlay', 'milk-overlay', 'solid-overlay'];
   function openOverlay(id){
     el(id).hidden = false;
   }
@@ -346,6 +348,24 @@
       if (node && !node.hidden && node.getClientRects().length) return OVERLAYS[i];
     }
     return null;
+  }
+
+  // ---------- "are you sure?" ----------
+  // Nothing is deleted on one tap. The question names what is about to go, so
+  // it can be answered at 3am without opening anything else.
+  var pendingConfirm = null;
+  function askConfirm(opts){
+    pendingConfirm = opts.onConfirm;
+    el('confirm-title').textContent = opts.title;
+    el('confirm-text').textContent = opts.text;
+    el('confirm-yes').textContent = opts.confirmLabel || 'Delete';
+    el('confirm-no').textContent = opts.keepLabel || 'Keep it';
+    openOverlay('confirm-overlay');
+    el('confirm-no').focus();
+  }
+  function closeConfirm(){
+    closeOverlay('confirm-overlay');
+    pendingConfirm = null;
   }
 
   function groupByDay(items, timeOf){
@@ -1320,19 +1340,39 @@
     await commit(ops);
   });
 
-  el('f-danger').addEventListener('click', async function(){
-    var ops;
+  el('f-danger').addEventListener('click', function(){
     if (formMode === 'entry'){
       var id = el('entry-id').value;
       if (!id){ closeForm(); return; }
-      ops = [{ type: 'delete', collection: 'entries', id: id }];
-      showToast('Sleep deleted');
-    } else {
-      ops = [{ type: 'status', status: { asleep: false, since: null, settleNotes: '' } }];
-      showToast(formMode === 'start' ? 'Sleep cancelled' : 'Sleep discarded');
+      var e = state.entries.find(function(x){ return x.id === id; });
+      askConfirm({
+        title: 'Delete this sleep?',
+        text: (e ? fmtTime(entryStart(e)) + ' to ' + fmtTime(entryEnd(e)) + ' on ' + friendlyDate(sleepDayKey(e)) +
+          ', ' + fmtDur(entryEnd(e) - entryStart(e)) + '. ' : '') + 'It will be gone for both of you, and cannot be undone.',
+        confirmLabel: 'Delete',
+        onConfirm: async function(){
+          showToast('Sleep deleted');
+          closeForm();
+          await commit([{ type: 'delete', collection: 'entries', id: id }]);
+        }
+      });
+      return;
     }
-    closeForm();
-    await commit(ops);
+
+    var asleepSince = state.status.since ? fmtTime(new Date(state.status.since)) : null;
+    var starting = formMode === 'start';
+    askConfirm({
+      title: starting ? 'Cancel this sleep?' : 'Discard this sleep?',
+      text: (asleepSince ? 'They went down at ' + asleepSince + '. ' : '') +
+        'Nothing is logged, and the timer stops.',
+      confirmLabel: starting ? 'Cancel sleep' : 'Discard',
+      keepLabel: 'Keep tracking',
+      onConfirm: async function(){
+        showToast(starting ? 'Sleep cancelled' : 'Sleep discarded');
+        closeForm();
+        await commit([{ type: 'status', status: { asleep: false, since: null, settleNotes: '' } }]);
+      }
+    });
   });
 
   // ======================================================
@@ -1516,11 +1556,21 @@
   el('milk-add-btn').addEventListener('click', function(){ if (!readOnly) openMilkForm(); });
   el('m-cancel').addEventListener('click', closeMilkForm);
   el('m-close').addEventListener('click', closeMilkForm);
-  el('m-delete').addEventListener('click', async function(){
+  el('m-delete').addEventListener('click', function(){
     var id = el('m-id').value;
-    if (id) showToast('Feed deleted');
-    closeMilkForm();
-    if (id) await commit([{ type: 'delete', collection: 'feeds', id: id }]);
+    if (!id){ closeMilkForm(); return; }
+    var f = state.feeds.find(function(x){ return x.id === id; });
+    askConfirm({
+      title: 'Delete this feed?',
+      text: (f ? feedTitle(f) + ' at ' + fmtTime(atDate(f)) + ' on ' + friendlyDate(f.date) + '. ' : '') +
+        'It will be gone for both of you, and cannot be undone.',
+      confirmLabel: 'Delete',
+      onConfirm: async function(){
+        showToast('Feed deleted');
+        closeMilkForm();
+        await commit([{ type: 'delete', collection: 'feeds', id: id }]);
+      }
+    });
   });
 
   // ======================================================
@@ -1681,11 +1731,21 @@
   el('solid-add-btn').addEventListener('click', function(){ if (!readOnly) openSolidForm(); });
   el('s-cancel').addEventListener('click', closeSolidForm);
   el('s-close').addEventListener('click', closeSolidForm);
-  el('s-delete').addEventListener('click', async function(){
+  el('s-delete').addEventListener('click', function(){
     var id = el('s-id').value;
-    if (id) showToast('Meal deleted');
-    closeSolidForm();
-    if (id) await commit([{ type: 'delete', collection: 'solids', id: id }]);
+    if (!id){ closeSolidForm(); return; }
+    var s = state.solids.find(function(x){ return x.id === id; });
+    askConfirm({
+      title: 'Delete this meal?',
+      text: (s ? ((s.foods || []).join(', ') || 'Solids') + ' at ' + fmtTime(atDate(s)) + ' on ' + friendlyDate(s.date) + '. ' : '') +
+        'It will be gone for both of you, and cannot be undone.',
+      confirmLabel: 'Delete',
+      onConfirm: async function(){
+        showToast('Meal deleted');
+        closeSolidForm();
+        await commit([{ type: 'delete', collection: 'solids', id: id }]);
+      }
+    });
   });
 
   // ======================================================
@@ -1805,10 +1865,22 @@
   el('settings-overlay').addEventListener('click', function(ev){
     if (ev.target === el('settings-overlay')) closeSettings();
   });
+  el('confirm-no').addEventListener('click', closeConfirm);
+  el('confirm-close').addEventListener('click', closeConfirm);
+  el('confirm-overlay').addEventListener('click', function(ev){
+    if (ev.target === el('confirm-overlay')) closeConfirm();
+  });
+  el('confirm-yes').addEventListener('click', async function(){
+    var act = pendingConfirm;
+    closeConfirm();
+    if (act) await act();
+  });
+
   document.addEventListener('keydown', function(ev){
     if (ev.key !== 'Escape') return;
     var open = openOverlayId();
-    if (open === 'settings-overlay') closeSettings();
+    if (open === 'confirm-overlay') closeConfirm();
+    else if (open === 'settings-overlay') closeSettings();
     else if (open === 'entry-overlay') closeForm();
     else if (open === 'milk-overlay') closeMilkForm();
     else if (open === 'solid-overlay') closeSolidForm();
