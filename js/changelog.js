@@ -8,6 +8,14 @@
  */
 window.CILLY_CHANGELOG = [
   {
+    version: '1.15',
+    date: '2026-09-19',
+    title: 'Staying where you were',
+    notes: [
+      'Opening a sleep, feed or meal from a log no longer throws the page behind it back to the top. Saving or cancelling leaves you where you were reading.'
+    ]
+  },
+  {
     version: '1.14',
     date: '2026-09-19',
     title: 'Settling times',
