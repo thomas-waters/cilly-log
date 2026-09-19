@@ -987,7 +987,7 @@
     if (FEATURES.medicine){
       state.meds.forEach(function(m){
         if (cutoff && m.date < cutoff) return;
-        rows.push(['Medicine', m.date, m.time, '', '', '', '', m.name || '', m.dose || '', '', '', '', m.notes || '', personName(m)]);
+        rows.push(['Medicine', m.date, m.time, '', '', '', '', m.name || '', medDoseMl(m) == null ? '' : medDoseMl(m), '', '', '', m.notes || '', personName(m)]);
       });
     }
 
@@ -2057,9 +2057,10 @@
       return '<button type="button" class="chip" data-med="' + escapeHtml(n) + '">' + escapeHtml(n) + '</button>';
     }).join('');
     var prior = last[String(el('md-name').value || '').toLowerCase()];
-    el('md-dose-chips').innerHTML = (prior && prior.dose)
-      ? '<button type="button" class="chip" data-dose="' + escapeHtml(prior.dose) + '">' + escapeHtml(prior.dose) + ' (last time)</button>'
-      : '';
+    var priorMl = prior ? medDoseMl(prior) : null;
+    el('md-dose-chips').innerHTML = priorMl === null
+      ? ''
+      : '<button type="button" class="chip" data-dose="' + priorMl + '">' + fmtDose(priorMl) + ' (last time)</button>';
     Array.prototype.forEach.call(el('md-gap').querySelectorAll('.unit-btn'), function(btn){
       btn.setAttribute('aria-pressed', Number(btn.dataset.gap) === medDraftGap ? 'true' : 'false');
     });
@@ -2102,7 +2103,7 @@
     el('md-date').value = m.date;
     el('md-time').value = m.time;
     el('md-name').value = m.name || '';
-    el('md-dose').value = m.dose || '';
+    el('md-dose').value = medDoseMl(m) === null ? '' : medDoseMl(m);
     el('md-notes').value = m.notes || '';
     el('med-title').textContent = 'Edit dose';
     el('md-submit').textContent = 'Save';
@@ -2115,9 +2116,15 @@
     return true;
   }
 
+  function medDoseMl(m){
+    var n = parseFloat(String(m && m.dose != null ? m.dose : '').replace(',', '.'));
+    return isNaN(n) || n <= 0 ? null : n;
+  }
+  function fmtDose(ml){ return (Math.round(ml * 100) / 100) + ' ml'; }
   function medTitle(m){
     var name = m.name || 'Medicine';
-    return m.dose ? name + ' ' + m.dose : name;
+    var ml = medDoseMl(m);
+    return ml === null ? name : name + ' ' + fmtDose(ml);
   }
 
   function medRowHtml(m){
@@ -2214,13 +2221,19 @@
     if (!date){ showError('md-error', 'Pick the date of this dose.', 'md-date'); return; }
     if (!time){ showError('md-error', 'Enter the time of this dose.', 'md-time'); return; }
     if (!name){ showError('md-error', 'Name the medicine.', 'md-name'); return; }
+    var typedDose = el('md-dose').value.trim();
+    var doseMl = typedDose === '' ? null : Number(typedDose);
+    if (typedDose !== '' && !(doseMl > 0)){
+      showError('md-error', 'Enter the dose in millilitres, or leave it blank.', 'md-dose');
+      return;
+    }
 
     var med = {
       id: el('md-id').value || uid(),
       date: date,
       time: time,
       name: name,
-      dose: el('md-dose').value.trim(),
+      dose: doseMl === null ? '' : String(doseMl),
       gapMin: medDraftGap || null,
       notes: el('md-notes').value.trim()
     };
@@ -2560,7 +2573,8 @@
         // Bring back what went with it last time, so a 3am dose is two taps.
         var prior = lastOfEachMed()[chip.getAttribute('data-med').toLowerCase()];
         if (prior){
-          if (prior.dose) el('md-dose').value = prior.dose;
+          var priorDose = medDoseMl(prior);
+          if (priorDose !== null) el('md-dose').value = priorDose;
           medDraftGap = prior.gapMin || 0;
         }
         renderMedHelpers();
