@@ -25,6 +25,14 @@
  */
 window.CILLY_CHANGELOG = [
   {
+    version: '1.10.0',
+    date: '2026-09-19',
+    title: 'Medicine is on',
+    notes: [
+      'The Medicine page is now switched on here: doses, and when the next one may be given, shared between both phones.'
+    ]
+  },
+  {
     version: '1.9.0',
     date: '2026-09-19',
     title: 'Medicine, longer trends, food history and a night mode',

@@ -14,7 +14,7 @@
     live: {
       supabaseUrl: 'https://hopvsalkhtgrqbbkioqn.supabase.co',
       supabaseAnonKey: 'sb_publishable_IXpyCf7727af0cpGUfP9_Q_R2VOZSJm',
-      features: { medicine: false, nightMode: true }
+      features: { medicine: true, nightMode: true }
     },
     staging: {
       supabaseUrl: 'https://kmcviicuibnetrbzcctd.supabase.co',
