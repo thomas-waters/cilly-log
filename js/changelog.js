@@ -25,6 +25,18 @@
  */
 window.CILLY_CHANGELOG = [
   {
+    version: '1.14.0',
+    date: '2026-09-19',
+    title: 'A month at a glance',
+    notes: [
+      'Summary has a calendar of the month, each day green, amber or red: green if he got the sleep usual for his age, amber within an hour of it, red further below. A day with nothing logged is left empty rather than marked red, and today is not judged until the night has finished.',
+      'Every day shows its hours as well as its colour, and under the grid is the month in a line: how many days were enough, how many were short, and the average.',
+      'Colour by total sleep, night sleep or naps. A run of short nights is easier to see than to remember.',
+      'Tap a day to see that day in full — night, naps, feeds, meals and every sleep with its notes — then open it in the log to change anything.',
+      'Arrows or a swipe move between months, back as far as the first thing logged. Printing the Summary now includes the month.'
+    ]
+  },
+  {
     version: '1.13.0',
     date: '2026-09-19',
     title: 'Night mode is now your choice',

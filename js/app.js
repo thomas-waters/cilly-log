@@ -383,7 +383,7 @@
   // Each one lives inside its own view, so only the current view's can show.
   // The confirm is first: it opens over the others, so Escape should reach it
   // before the form underneath.
-  var OVERLAYS = ['confirm-overlay', 'changelog-overlay', 'settings-overlay', 'entry-overlay', 'milk-overlay', 'solid-overlay', 'med-overlay'];
+  var OVERLAYS = ['confirm-overlay', 'changelog-overlay', 'settings-overlay', 'day-overlay', 'entry-overlay', 'milk-overlay', 'solid-overlay', 'med-overlay'];
   function openOverlay(id){
     el(id).hidden = false;
   }
@@ -475,6 +475,8 @@
     groups.forEach(function(g){
       var dayEl = document.createElement('div');
       dayEl.className = 'day-group';
+      // Tapping a day in the month grid scrolls the log to this group.
+      dayEl.dataset.day = g.key;
       var head = document.createElement('div');
       head.className = 'day-head';
       head.innerHTML = '<span>' + friendlyDate(g.key) + '</span><span class="day-total">' + headRight(g.items) + '</span>';
@@ -778,6 +780,7 @@
 
     renderDayTable();
     renderNorms();
+    renderMonth();
     el('print-heading').textContent = 'Cilly Log — ' + summaryDays + ' days to ' +
       new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     el('summary-tagline').textContent = 'The last ' + (summaryDays === 7 ? '7 days' : (summaryDays / 7) + ' weeks') + ', and how they compare.';
@@ -957,6 +960,321 @@
         ? 'Averages cover all ' + summaryDays + ' days.'
         : 'Averages count only days with something logged (' + plural(loggedDays, 'day') + ' of ' + summaryDays + '). Each column counts its own days.');
   }
+
+  // ======================================================
+  // MONTH AT A GLANCE
+  // ======================================================
+  // A calendar month with every day coloured by whether he got the sleep his
+  // age asks for. Only a shortfall is marked: the question is whether he got
+  // enough, so a day above the range is as good as one inside it. Marking a
+  // long day amber would teach you to ignore the colours.
+  //
+  // The ranges are the ones in js/sleep-model.js that "Usual for his age"
+  // uses, and the band comes from his age ON THAT DAY, so scrolling back a few
+  // months judges those days by the baby he was then rather than the one he is
+  // now. Each cell prints its hours as well as its colour: red and green look
+  // the same to plenty of people, and "how short was it" is the better
+  // question anyway.
+  var MONTH_AMBER_MS = 60 * 60000;
+  var MONTH_METRICS = {
+    total: { label: 'total sleep in 24 hours', pick: function(t){ return t.night + t.naps; }, range: function(b){ return b.total; } },
+    night: { label: 'night sleep', pick: function(t){ return t.night; }, range: function(b){ return b.nightSleep; } },
+    naps: { label: 'nap sleep', pick: function(t){ return t.naps; }, range: function(b){ return b.daySleep; } }
+  };
+  var MONTH_METRIC_KEY = 'cilly.monthMetric';
+  var monthMetric = (function(){
+    var saved = ssGet(MONTH_METRIC_KEY);
+    return MONTH_METRICS[saved] ? saved : 'total';
+  })();
+  // Opens on this month, as a calendar does. It only moves when the arrows or
+  // a swipe move it: a save elsewhere on the page re-renders the grid and
+  // should not throw you back to today.
+  var monthCursor = (function(){ var d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; })();
+
+  function monthName(y, m){
+    return new Date(y, m, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  }
+  function keyOf(y, m, day){ return y + '-' + pad(m + 1) + '-' + pad(day); }
+  function longDayName(key){
+    var parts = key.split('-').map(Number);
+    return new Date(parts[0], parts[1] - 1, parts[2])
+      .toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+  }
+  // The band for his age on a given day, not today's band.
+  function bandOn(key){
+    var s = state.settings || {};
+    if (!s.dob || !MODEL) return null;
+    var parts = key.split('-').map(Number);
+    var months = ageMonths(s.dob, new Date(parts[0], parts[1] - 1, parts[2]));
+    return months === null ? null : MODEL.bandFor(months);
+  }
+  // A day is not finished until its night is. The night that starts on the
+  // 12th runs into the 13th, so the 12th cannot be judged until the night ends
+  // the next morning - otherwise today would sit there in red all evening.
+  function dayComplete(key){
+    var parts = key.split('-').map(Number);
+    var end = new Date(parts[0], parts[1] - 1, parts[2] + 1);
+    end.setHours(0, nightBounds().end, 0, 0);
+    return Date.now() >= end.getTime();
+  }
+
+  // What one cell knows about itself. States: ok / warn / bad are verdicts,
+  // plain is a figure with no verdict (no date of birth), soon is a day still
+  // running, none is a finished day with nothing written down, and before is a
+  // date earlier than he was.
+  function monthDay(key){
+    var s = state.settings || {};
+    var todayKey = dateKey(new Date());
+    if (key > todayKey) return { key: key, state: 'future' };
+    if (s.dob && key < s.dob) return { key: key, state: 'before' };
+    var totals = dayTotals(key);
+    var ms = MONTH_METRICS[monthMetric].pick(totals);
+    var complete = dayComplete(key);
+    if (!complete) return { key: key, state: 'soon', ms: ms, totals: totals };
+    if (!ms) return { key: key, state: 'none', ms: 0, totals: totals };
+    var band = bandOn(key);
+    if (!band) return { key: key, state: 'plain', ms: ms, totals: totals };
+    var range = MONTH_METRICS[monthMetric].range(band);
+    var low = range[0] * 60000;
+    return {
+      key: key, ms: ms, totals: totals, band: band, low: low, high: range[1] * 60000,
+      state: ms >= low ? 'ok' : ms >= low - MONTH_AMBER_MS ? 'warn' : 'bad'
+    };
+  }
+
+  // The age ranges are whole and half hours, so "13h – 14h" reads better than
+  // "13h 0m – 14h 0m". Same rounding as the norms table.
+  function roundDur(ms){ return ms % 3600000 === 0 ? (ms / 3600000) + 'h' : fmtDur(ms); }
+  function roundRange(range){ return roundDur(range[0] * 60000) + ' – ' + roundDur(range[1] * 60000); }
+
+  // Hours for a cell about 40px wide, so "11h 40m" will not do.
+  function shortDur(ms){
+    var min = Math.max(0, Math.round(ms / 60000));
+    var h = Math.floor(min / 60), m = min % 60;
+    if (!h) return m + 'm';
+    return m ? h + 'h' + pad(m) : h + 'h';
+  }
+  var MONTH_WORDS = {
+    ok: 'enough', warn: 'up to an hour short', bad: 'more than an hour short',
+    none: 'nothing logged', soon: 'still going', plain: 'logged', before: '', future: ''
+  };
+
+  function renderMonth(){
+    var y = monthCursor.y, m = monthCursor.m;
+    var todayKey = dateKey(new Date());
+    var metric = MONTH_METRICS[monthMetric];
+
+    Array.prototype.forEach.call(el('month-metric').querySelectorAll('.unit-btn'), function(btn){
+      btn.setAttribute('aria-pressed', btn.dataset.metric === monthMetric ? 'true' : 'false');
+    });
+    el('month-label').textContent = monthName(y, m);
+
+    // Forward stops at this month; back stops at the first thing there is to
+    // look at, so the arrows never walk into empty years.
+    var now = new Date();
+    el('month-next').disabled = (y === now.getFullYear() && m === now.getMonth());
+    var firstKey = earliestDayKey();
+    el('month-prev').disabled = !firstKey || keyOf(y, m, 1) <= firstKey.slice(0, 7) + '-01';
+
+    var days = new Date(y, m + 1, 0).getDate();
+    var lead = (new Date(y, m, 1).getDay() + 6) % 7; // weeks start on Monday
+    var cells = '';
+    for (var i = 0; i < lead; i++) cells += '<span class="month-cell is-blank" aria-hidden="true"></span>';
+
+    var counts = { ok: 0, warn: 0, bad: 0, none: 0 }, loggedMs = 0, loggedDays = 0;
+    for (var d = 1; d <= days; d++){
+      var day = monthDay(keyOf(y, m, d));
+      if (counts[day.state] !== undefined) counts[day.state]++;
+      if (day.ms){ loggedMs += day.ms; loggedDays++; }
+      var figure = day.ms ? shortDur(day.ms) : (day.state === 'none' ? '·' : '');
+      var label = longDayName(day.key) + (day.ms ? ', ' + fmtDur(day.ms) + ' ' + metric.label : '') +
+        (MONTH_WORDS[day.state] ? ', ' + MONTH_WORDS[day.state] : '');
+      var disabled = day.state === 'future' || day.state === 'before';
+      cells += '<button type="button" class="month-cell" data-day="' + day.key + '"' +
+        ' data-state="' + day.state + '"' + (day.key === todayKey ? ' data-today="true"' : '') +
+        (disabled ? ' disabled' : '') + ' aria-label="' + escapeHtml(label) + '">' +
+        '<span class="month-date">' + d + '</span>' +
+        '<span class="month-figure">' + figure + '</span>' +
+      '</button>';
+    }
+    el('month-grid').innerHTML = cells;
+
+    var judged = counts.ok + counts.warn + counts.bad;
+    var parts = [];
+    if (judged){
+      parts.push('<b>' + counts.ok + '</b> enough');
+      parts.push('<b>' + counts.warn + '</b> up to an hour short');
+      parts.push('<b>' + counts.bad + '</b> more than an hour short');
+    }
+    if (counts.none) parts.push('<b>' + counts.none + '</b> not logged');
+    if (loggedDays) parts.push('<b>' + fmtDur(loggedMs / loggedDays) + '</b> a day');
+    el('month-summary').innerHTML = parts.length
+      ? parts.join(' <span class="month-dot">·</span> ')
+      : 'Nothing logged in ' + monthName(y, m) + '.';
+
+    // The note describes the month on screen, not today: scrolling back to
+    // February should quote the ranges February was judged by. The middle of
+    // the month stands for it, clamped so a part-finished or not-yet-born
+    // month still has a real day to ask about.
+    var probeKey = todayKey.slice(0, 7) === keyOf(y, m, 1).slice(0, 7)
+      ? todayKey
+      : keyOf(y, m, Math.min(15, days));
+    var dobKey = (state.settings || {}).dob;
+    if (dobKey && probeKey < dobKey) probeKey = dobKey;
+    var band = bandOn(probeKey);
+    var note;
+    if (!(state.settings || {}).dob){
+      note = 'Add a date of birth in Settings and each day can be judged against the sleep usual at his age. ' +
+        'For now the cells just show what was logged.';
+    } else if (band){
+      var range = metric.range(band);
+      note = 'Green is ' + roundDur(range[0] * 60000) + ' of ' + metric.label + ' or more, the bottom of the usual ' +
+        roundRange(range) + ' at ' + band.label + '. Amber is within an hour of it, ' +
+        'red is further below. Each day is judged by his age on that day. These are population ranges, not targets: ' +
+        'a short day on its own is not a problem.';
+    } else {
+      note = 'Cells show the ' + metric.label + ' logged for each day.';
+    }
+    el('month-note').textContent = note;
+  }
+
+  function earliestDayKey(){
+    var earliest = null;
+    state.entries.forEach(function(e){
+      var k = sleepDayKey(e);
+      if (!earliest || k < earliest) earliest = k;
+    });
+    var dob = (state.settings || {}).dob;
+    if (dob && (!earliest || dob < earliest)) earliest = dob;
+    return earliest;
+  }
+
+  function shiftMonth(step){
+    var d = new Date(monthCursor.y, monthCursor.m + step, 1);
+    var now = new Date();
+    if (d > new Date(now.getFullYear(), now.getMonth(), 1)) return;
+    var firstKey = earliestDayKey();
+    if (firstKey && keyOf(d.getFullYear(), d.getMonth(), 1) < firstKey.slice(0, 7) + '-01') return;
+    monthCursor = { y: d.getFullYear(), m: d.getMonth() };
+    renderMonth();
+  }
+
+  el('month-prev').addEventListener('click', function(){ shiftMonth(-1); });
+  el('month-next').addEventListener('click', function(){ shiftMonth(1); });
+  el('month-metric').addEventListener('click', function(ev){
+    var btn = ev.target.closest('.unit-btn');
+    if (!btn) return;
+    monthMetric = btn.dataset.metric;
+    ssSet(MONTH_METRIC_KEY, monthMetric);
+    renderMonth();
+  });
+
+  // Swiping the grid moves the month, since this is used one-handed. A swipe
+  // ends in a click on whichever cell the thumb left, so the next one is
+  // swallowed.
+  var touchStart = null, swiped = false;
+  el('month-grid').addEventListener('touchstart', function(ev){
+    var t = ev.changedTouches[0];
+    touchStart = { x: t.clientX, y: t.clientY };
+    swiped = false;
+  }, { passive: true });
+  el('month-grid').addEventListener('touchend', function(ev){
+    if (!touchStart) return;
+    var t = ev.changedTouches[0];
+    var dx = t.clientX - touchStart.x, dy = t.clientY - touchStart.y;
+    touchStart = null;
+    if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    swiped = true;
+    shiftMonth(dx < 0 ? 1 : -1);
+  }, { passive: true });
+
+  el('month-grid').addEventListener('click', function(ev){
+    var cell = ev.target.closest('.month-cell');
+    if (!cell || !cell.dataset.day) return;
+    if (swiped){ swiped = false; return; }
+    openDay(cell.dataset.day);
+  });
+
+  // ---------- a day, in full ----------
+  // The colour is a verdict on a day, so tapping it has to show the day the
+  // verdict was made on: the same sleeps, counted the same way. Editing still
+  // belongs in the log, which is what the button at the bottom is for.
+  var openDayKey = null;
+  function openDay(key){
+    openDayKey = key;
+    var day = monthDay(key);
+    var totals = day.totals || dayTotals(key);
+    el('day-title').textContent = longDayName(key);
+
+    var band = bandOn(key), metric = MONTH_METRICS[monthMetric];
+    var verdict = el('day-verdict');
+    if (!day.ms && day.state === 'none'){
+      verdict.textContent = 'Nothing logged on this day.';
+      verdict.dataset.state = 'none';
+    } else if (day.state === 'soon'){
+      verdict.textContent = fmtDur(day.ms) + ' of ' + metric.label + ' so far. The day is still going, so there is no verdict yet.';
+      verdict.dataset.state = 'soon';
+    } else if (band){
+      var range = metric.range(band);
+      var low = range[0] * 60000;
+      verdict.textContent = day.ms >= low
+        ? fmtDur(day.ms) + ' of ' + metric.label + ' — at or above the usual ' + roundRange(range) + ' at ' + band.label + '.'
+        : fmtDur(day.ms) + ' of ' + metric.label + ' — ' + fmtDur(low - day.ms) + ' below the usual ' + roundRange(range) + ' at ' + band.label + '.';
+      verdict.dataset.state = day.state;
+    } else {
+      verdict.textContent = fmtDur(day.ms) + ' of ' + metric.label + ' logged.';
+      verdict.dataset.state = 'plain';
+    }
+
+    var sleeps = state.entries.filter(function(e){ return sleepDayKey(e) === key; })
+      .sort(function(a, b){ return entryStart(a) - entryStart(b); });
+    var nights = sleeps.filter(isNight).length;
+    el('day-detail-table').innerHTML =
+      '<tbody>' +
+      '<tr><td>Night</td><td>' + (totals.night ? fmtDur(totals.night) : '—') +
+        (nights > 1 ? ' <span class="norm-days">' + plural(nights - 1, 'waking') + '</span>' : '') + '</td></tr>' +
+      '<tr><td>Naps</td><td>' + (totals.naps ? fmtDur(totals.naps) + ' <span class="norm-days">' + plural(sleeps.length - nights, 'nap') + '</span>' : '—') + '</td></tr>' +
+      '<tr><td>Total in 24h</td><td>' + ((totals.night + totals.naps) ? fmtDur(totals.night + totals.naps) : '—') + '</td></tr>' +
+      '<tr><td>Feeds</td><td>' + (totals.feeds || '—') + '</td></tr>' +
+      '<tr><td>Meals</td><td>' + (totals.meals || '—') + '</td></tr>' +
+      '</tbody>';
+
+    el('day-sleeps').innerHTML = sleeps.length
+      ? sleeps.map(function(e){
+          return '<div class="entry-row">' +
+            '<div class="entry-main">' +
+              '<span class="entry-range">' + fmtTime(entryStart(e)) + '&nbsp;&ndash;&nbsp;' + fmtTime(entryEnd(e)) + '</span>' +
+              sleepMetaHtml(e) + noteLines(e) +
+            '</div>' +
+            '<div class="entry-side"><span class="entry-dur">' + fmtDur(entryEnd(e) - entryStart(e)) + '</span></div>' +
+          '</div>';
+        }).join('')
+      : '<p class="form-hint">No sleep written down for this day.</p>';
+
+    // Night sleep counts towards the evening it started, so the list can hold
+    // a resettle from the small hours of the next morning. Saying so stops it
+    // reading as a mistake.
+    el('day-sleeps-note').hidden = !nights;
+    el('day-sleeps-note').textContent = 'The night that started this evening counts here, including any resettling after midnight.';
+
+    openOverlay('day-overlay');
+    el('day-close').focus();
+  }
+  function closeDay(){ closeOverlay('day-overlay'); }
+  el('day-close').addEventListener('click', closeDay);
+  el('day-overlay').addEventListener('click', function(ev){ if (ev.target === el('day-overlay')) closeDay(); });
+  el('day-open-log').addEventListener('click', function(){
+    var key = openDayKey;
+    closeDay();
+    goTo('sleep');
+    // The log groups by the date written on each sleep, so this lands on the
+    // day you tapped even where the night above belongs to the evening before.
+    var node = document.querySelector('#log-list .day-group[data-day="' + key + '"]');
+    if (!node){ showToast('Nothing logged on ' + friendlyDate(key)); return; }
+    node.scrollIntoView({ block: 'center' });
+    node.classList.add('is-found');
+    setTimeout(function(){ node.classList.remove('is-found'); }, 1800);
+  });
 
   function csvCell(value){
     var s = value == null ? '' : String(value);
@@ -2667,6 +2985,7 @@
     if (open === 'confirm-overlay') closeConfirm();
     else if (open === 'changelog-overlay') closeChangelog();
     else if (open === 'settings-overlay') closeSettings();
+    else if (open === 'day-overlay') closeDay();
     else if (open === 'entry-overlay') closeForm();
     else if (open === 'milk-overlay') closeMilkForm();
     else if (open === 'solid-overlay') closeSolidForm();

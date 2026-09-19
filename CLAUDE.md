@@ -46,6 +46,17 @@ It holds real family records: treat the live data with care.
   it half an hour either side of the night start, `age` uses the band's own
   range. Any new clock time the guide shows should come from one of those
   two, not from a constant.
+- Summary's **Month at a glance** answers one question — did he get enough? —
+  so only a shortfall is coloured: at or above the range is green, within an
+  hour below is amber, further below is red (`monthDay` in `js/app.js`). The
+  range comes from `js/sleep-model.js` for his age **on that day**, so older
+  months are judged by the baby he was then. A day is not judged until its
+  night has finished (`dayComplete`), and a day with nothing logged is a
+  dotted cell, never red — the grid must never imply he slept badly when
+  nobody wrote it down. Every cell prints its hours as well as its colour,
+  because red and green look alike to plenty of people. Green is `--ok` /
+  `--ok-soft`, defined in all four palettes; the grid is also the one thing
+  that keeps its colours in print, where the rest of the page goes grey.
 
 ## Branches and deploys
 

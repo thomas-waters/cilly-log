@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#5B54D6">
   <title>Cilly Log</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
-  <link rel="stylesheet" href="css/app.css?v=20260919-2254">
+  <link rel="stylesheet" href="css/app.css?v=20260919-2344">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -744,6 +744,44 @@
       <p class="form-hint" id="norms-note"></p>
     </section>
 
+    <section class="panel" id="month-panel" aria-label="Month at a glance">
+      <div class="panel-head month-head">
+        <h2>Month at a glance</h2>
+        <div class="month-nav">
+          <button class="icon-btn no-print" type="button" id="month-prev" aria-label="Previous month">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M15 5l-7 7 7 7"/></svg>
+          </button>
+          <span class="chart-range" id="month-label">This month</span>
+          <button class="icon-btn no-print" type="button" id="month-next" aria-label="Next month">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="field no-print">
+        <span class="field-label" id="month-metric-label">Colour by</span>
+        <div class="unit-toggle basis-toggle" id="month-metric" role="group" aria-labelledby="month-metric-label">
+          <button type="button" class="unit-btn" data-metric="total" aria-pressed="true">Total</button>
+          <button type="button" class="unit-btn" data-metric="night" aria-pressed="false">Night</button>
+          <button type="button" class="unit-btn" data-metric="naps" aria-pressed="false">Naps</button>
+        </div>
+      </div>
+
+      <div class="month-week-heads" aria-hidden="true">
+        <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+      </div>
+      <div class="month-grid" id="month-grid" role="group" aria-label="Days of the month"></div>
+
+      <p class="month-summary" id="month-summary"></p>
+      <div class="month-legend" aria-hidden="true">
+        <span class="month-key" data-state="ok">Enough</span>
+        <span class="month-key" data-state="warn">Up to an hour short</span>
+        <span class="month-key" data-state="bad">More than an hour short</span>
+        <span class="month-key" data-state="none">Not logged</span>
+      </div>
+      <p class="form-hint" id="month-note"></p>
+    </section>
+
     <section class="panel" aria-label="Day by day">
       <div class="panel-head">
         <h2 id="day-table-heading">Day by day</h2>
@@ -767,7 +805,7 @@
           <option value="0">Everything</option>
         </select>
       </div>
-      <p class="form-hint">The spreadsheet has one row per event. The printout is this page: the weekly figures and the day-by-day table.</p>
+      <p class="form-hint">The spreadsheet has one row per event. The printout is this page: the weekly figures, the month grid and the day-by-day table.</p>
       <div class="form-actions">
         <button type="button" class="btn ghost" id="print-btn">Print summary</button>
         <button type="button" class="btn primary" id="csv-btn">Download spreadsheet</button>
@@ -777,6 +815,28 @@
         <button type="button" class="btn ghost" id="report-btn">Sleep consultant log</button>
       </div>
     </section>
+
+    <!-- Opened by tapping a day in the month grid. Read-only: editing happens
+         in the log, which the button at the bottom goes to. -->
+    <div class="overlay no-print" id="day-overlay" hidden>
+      <section class="panel overlay-panel day-panel" role="dialog" aria-modal="true" aria-labelledby="day-title">
+        <div class="overlay-head">
+          <h2 id="day-title">Day</h2>
+          <button type="button" class="head-btn" id="day-close" aria-label="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
+        <p class="day-verdict" id="day-verdict"></p>
+        <div class="table-wrap">
+          <table class="day-table" id="day-detail-table"></table>
+        </div>
+        <div class="day-sleeps" id="day-sleeps"></div>
+        <p class="form-hint" id="day-sleeps-note" hidden></p>
+        <div class="form-actions">
+          <button type="button" class="btn primary" id="day-open-log">Open in the log</button>
+        </div>
+      </section>
+    </div>
   </section>
 
   <!-- Opened from Settings, over it. -->
@@ -815,11 +875,11 @@
 
 <div class="toast" id="toast" hidden></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/config.js?v=20260919-2254"></script>
-<script src="js/store.js?v=20260919-2254"></script>
-<script src="js/docx.js?v=20260919-2254"></script>
-<script src="js/changelog.js?v=20260919-2254"></script>
-<script src="js/sleep-model.js?v=20260919-2254"></script>
-<script src="js/app.js?v=20260919-2254"></script>
+<script src="js/config.js?v=20260919-2344"></script>
+<script src="js/store.js?v=20260919-2344"></script>
+<script src="js/docx.js?v=20260919-2344"></script>
+<script src="js/changelog.js?v=20260919-2344"></script>
+<script src="js/sleep-model.js?v=20260919-2344"></script>
+<script src="js/app.js?v=20260919-2344"></script>
 </body>
 </html>
