@@ -32,6 +32,7 @@ window.CILLY_CHANGELOG = [
       'Settings is now in two parts: Shared, which both phones see, and Just for you, which is kept on your account and changes nothing on the other phone.',
       'Night mode and the time-to-settle chart have moved into Just for you, so one of you can have night mode without the other. Both keep whatever was set for them until you change them.',
       'Anything under Just for you takes effect as you tap it; Save is for the shared settings.',
+      'A third section, About, says which version this phone is running and holds the change log.',
       'Appearance: System, Light or Dark. System is what the app has always done — it follows whatever your phone is set to. Light and dark are both proper themes; this just lets you pick one and stay there.',
       'The choice takes effect as you tap it, and the app opens in it next time rather than flashing the other one first.',
       'Night mode still takes over between your night times, whichever you choose.'

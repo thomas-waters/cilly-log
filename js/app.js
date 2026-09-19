@@ -2994,11 +2994,22 @@
     renderSettleChoice();
     renderNightChoice();
     renderThemeChoice();
+    renderAbout();
     hideError('set-error');
     openOverlay('settings-overlay');
     el('set-dob').focus();
   }
   function closeSettings(){ closeOverlay('settings-overlay'); }
+
+  // What this phone is actually running. The version says what it can do, the
+  // build says which copy of it arrived - useful when one phone has the update
+  // and the other has not.
+  function renderAbout(){
+    var latest = (window.CILLY_CHANGELOG || [])[0];
+    var build = currentBuild();
+    el('set-about-hint').textContent = (latest ? 'Version ' + latest.version : 'Cilly Log') +
+      (build ? ' · build ' + build : '') + '.';
+  }
 
   // ---------- change log ----------
   // Entries live in js/changelog.js. The build stamp underneath comes from the
