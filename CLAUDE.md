@@ -41,6 +41,14 @@ It holds real family records: treat the live data with care.
 - Every release adds an entry at the top of `js/changelog.js`, in the same
   change that ships it: bump the version, date it, and write what a parent
   will notice. Settings → Change log shows that list and the running build.
+- Versions are semantic versioning 2.0.0. The public API the numbers describe
+  is what a parent can do in the app plus the shape of the stored records:
+  MAJOR when something they could do is taken away or changes meaning, or old
+  builds can no longer read the data; MINOR when something is added and the
+  rest still works; PATCH for fixes and for changes nobody can see. Taking
+  away something that was already broken is a fix, not a major — that is why
+  hiding the dead email sign-in link is 1.3.1. The header of
+  `js/changelog.js` spells this out — keep the two in step.
 - `staging` (when present) deploys to `…/cilly-log/staging/` and points at a
   separate Supabase project with throwaway data. Try features there first.
 - Repo: `thomas-waters/cilly-log` (public). Never commit anything under

@@ -5,10 +5,36 @@
  * same change that ships it, written for whoever is reading it at 3am: what
  * they will notice, not what was refactored. Where a release changed nothing
  * they can see, say that plainly rather than dressing it up.
+ *
+ * Versions are semantic versioning 2.0.0 (https://semver.org). The spec asks
+ * for a declared public API; nobody calls this app from code, so its public
+ * API is what a parent can do in it and the shape of the records both phones
+ * read:
+ *
+ *   MAJOR  something a parent could do stops working the way it did - a way
+ *          in, a screen, a field or a figure is taken away or changes meaning
+ *          - or older builds can no longer read the stored records.
+ *   MINOR  something is added and everything already there still works.
+ *   PATCH  a fix, or a change nobody using the app can see.
+ *
+ * There has been no major yet. The nearest thing was 1.3.1, where the emailed
+ * sign-in link was hidden: it had stopped working — Supabase rate-limited it
+ * — so taking it away fixed a dead end rather than removing something that
+ * worked. Judge it that way next time too: a way out that was already broken
+ * is a fix, a working one being removed is a major.
  */
 window.CILLY_CHANGELOG = [
   {
-    version: '1.15',
+    version: '1.8.2',
+    date: '2026-09-19',
+    title: 'Version numbers now mean something',
+    notes: [
+      'Versions follow semantic versioning: the first number changes when something you could do stops working the way it did, the second when something is added, the third for fixes.',
+      'Every past release has been renumbered to match, so the numbers in this list have changed. Nothing about the app itself changed with this update.'
+    ]
+  },
+  {
+    version: '1.8.1',
     date: '2026-09-19',
     title: 'Staying where you were',
     notes: [
@@ -16,7 +42,7 @@ window.CILLY_CHANGELOG = [
     ]
   },
   {
-    version: '1.14',
+    version: '1.8.0',
     date: '2026-09-19',
     title: 'Settling times',
     notes: [
@@ -28,7 +54,7 @@ window.CILLY_CHANGELOG = [
     ]
   },
   {
-    version: '1.13',
+    version: '1.7.0',
     date: '2026-09-18',
     title: 'This change log',
     notes: [
@@ -36,7 +62,7 @@ window.CILLY_CHANGELOG = [
     ]
   },
   {
-    version: '1.12',
+    version: '1.6.0',
     date: '2026-09-18',
     title: 'What the age comparison rests on',
     notes: [
@@ -45,7 +71,7 @@ window.CILLY_CHANGELOG = [
     ]
   },
   {
-    version: '1.11',
+    version: '1.5.0',
     date: '2026-09-18',
     title: 'One way to log, and a check before deleting',
     notes: [
@@ -56,7 +82,7 @@ window.CILLY_CHANGELOG = [
     ]
   },
   {
-    version: '1.10',
+    version: '1.4.0',
     date: '2026-09-18',
     title: 'The sleep guide learned about night',
     notes: [
@@ -68,7 +94,7 @@ window.CILLY_CHANGELOG = [
     ]
   },
   {
-    version: '1.9',
+    version: '1.3.2',
     date: '2026-09-18',
     title: 'Bedtime, not a nap',
     notes: [
@@ -76,7 +102,7 @@ window.CILLY_CHANGELOG = [
     ]
   },
   {
-    version: '1.8',
+    version: '1.3.1',
     date: '2026-09-18',
     title: 'Google sign-in only',
     notes: [
@@ -84,7 +110,7 @@ window.CILLY_CHANGELOG = [
     ]
   },
   {
-    version: '1.7',
+    version: '1.3.0',
     date: '2026-09-17',
     title: 'Sleep edits and bottle feeds',
     notes: [
@@ -96,7 +122,7 @@ window.CILLY_CHANGELOG = [
     ]
   },
   {
-    version: '1.6',
+    version: '1.2.3',
     date: '2026-09-17',
     title: 'Behind the scenes',
     notes: [
@@ -104,7 +130,7 @@ window.CILLY_CHANGELOG = [
     ]
   },
   {
-    version: '1.5',
+    version: '1.2.2',
     date: '2026-09-17',
     title: 'Fairer averages',
     notes: [
@@ -112,7 +138,7 @@ window.CILLY_CHANGELOG = [
     ]
   },
   {
-    version: '1.4',
+    version: '1.2.1',
     date: '2026-09-17',
     title: 'Blank Summary fixed',
     notes: [
@@ -120,7 +146,7 @@ window.CILLY_CHANGELOG = [
     ]
   },
   {
-    version: '1.3',
+    version: '1.2.0',
     date: '2026-09-17',
     title: 'Summary and export',
     notes: [
@@ -130,7 +156,7 @@ window.CILLY_CHANGELOG = [
     ]
   },
   {
-    version: '1.2',
+    version: '1.1.1',
     date: '2026-09-17',
     title: 'Text fix',
     notes: [
@@ -138,7 +164,7 @@ window.CILLY_CHANGELOG = [
     ]
   },
   {
-    version: '1.1',
+    version: '1.1.0',
     date: '2026-09-17',
     title: 'Sign in with Google',
     notes: [
@@ -146,7 +172,7 @@ window.CILLY_CHANGELOG = [
     ]
   },
   {
-    version: '1.0',
+    version: '1.0.0',
     date: '2026-09-17',
     title: 'First version',
     notes: [
