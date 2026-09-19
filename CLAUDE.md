@@ -76,6 +76,17 @@ It holds real family records: treat the live data with care.
   sequences as damage wherever it finds them, so don't paste examples of
   mojibake into the files it scans.
 
+## Exports
+
+There are three, all on the Summary page. The spreadsheet is one row per
+event for a chosen period. Printing the Summary gives the figures and the
+day-by-day table. The **Consultant log** (`view-report`) writes the days out
+instead: a two-column table, a line per event in order, in the shape a sleep
+consultant asks for — what happened, what you did, how he was. The settle and
+wake notes are what carry the last two, so a sleep logged without them comes
+out as bare times and the page says how many of those there are. Printing
+prints whichever view is open, not always the Summary.
+
 ## Checks
 
 `python tools/check_leaks.py` fails on email addresses (other than the

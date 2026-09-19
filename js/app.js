@@ -19,7 +19,7 @@
       node.hidden = !FEATURES.medicine;
     });
   }
-  var VIEWS = ['home', 'sleep', 'milk', 'solids', 'meds', 'summary'];
+  var VIEWS = ['home', 'sleep', 'milk', 'solids', 'meds', 'summary', 'report'];
   var DRAFT_KEY = 'cilly.draft', VIEW_KEY = 'cilly.view';
   var DRAFT_MAX_AGE = 30 * 60000;
   var FORM_FIELDS = {
@@ -1017,6 +1017,167 @@
 
   el('csv-btn').addEventListener('click', downloadCsv);
   el('print-btn').addEventListener('click', function(){ window.print(); });
+
+  // ======================================================
+  // SLEEP CONSULTANT LOG
+  // ======================================================
+  // A sleep consultant wants the days written out, not a spreadsheet: one line
+  // per event, in order, saying what happened, what you did and how he was.
+  // The notes fields are what carry "what you did" and "demeanour", so a sleep
+  // logged without them comes out as bare times - which is worth seeing.
+  var reportDays = 3;
+
+  function reportLines(e, kind){
+    var parts = [];
+    if (kind === 'sleep'){
+      var night = isNight(e);
+      var mins = settleMinutes(e);
+      parts.push((night ? 'Night sleep' : 'Nap') + ', ' + fmtDur(entryEnd(e) - entryStart(e)) + '.');
+      if (e.putDown){
+        parts.push('Into the cot at ' + fmtClock(minutesOf(e.putDown)) +
+          (mins === null ? '.' : mins === 0 ? ', asleep straight away.' : ', asleep after ' + mins + ' minutes.'));
+      }
+      if (e.settleNotes) parts.push('Settling: ' + e.settleNotes);
+      if (e.wakeNotes) parts.push('On waking: ' + e.wakeNotes);
+    } else if (kind === 'milk'){
+      parts.push(e.kind === 'bottle'
+        ? 'Bottle' + (e.amountMl == null ? '.' : ', ' + fmtAmount(e) + '.')
+        : 'Breast feed.');
+      if (e.notes) parts.push(e.notes);
+    } else if (kind === 'solids'){
+      parts.push('Solids: ' + ((e.foods || []).join(', ') || 'not listed') + '.');
+      if (e.notes) parts.push(e.notes);
+    } else if (kind === 'meds'){
+      parts.push(medTitle(e) + '.');
+      if (e.notes) parts.push(e.notes);
+    }
+    return parts.join(' ');
+  }
+
+  // Every event in the window, oldest first, so the log reads as a diary.
+  function reportEvents(days){
+    var cutoff = new Date();
+    cutoff.setHours(0, 0, 0, 0);
+    cutoff.setDate(cutoff.getDate() - (days - 1));
+    var out = [];
+    state.entries.forEach(function(e){
+      var at = entryStart(e);
+      if (at >= cutoff) out.push({ at: at, kind: 'sleep', night: isNight(e), ms: entryEnd(e) - at,
+        when: fmtTime(at) + ' – ' + fmtTime(entryEnd(e)), text: reportLines(e, 'sleep') });
+    });
+    state.feeds.forEach(function(f){
+      var at = atDate(f);
+      if (at >= cutoff) out.push({ at: at, kind: 'milk', when: fmtTime(at), text: reportLines(f, 'milk') });
+    });
+    state.solids.forEach(function(s){
+      var at = atDate(s);
+      if (at >= cutoff) out.push({ at: at, kind: 'solids', when: fmtTime(at), text: reportLines(s, 'solids') });
+    });
+    if (FEATURES.medicine){
+      state.meds.forEach(function(m){
+        var at = atDate(m);
+        if (at >= cutoff) out.push({ at: at, kind: 'meds', when: fmtTime(at), text: reportLines(m, 'meds') });
+      });
+    }
+    return out.sort(function(a, b){ return a.at - b.at; });
+  }
+
+  // Counted from the lines listed under the heading rather than from the night
+  // they belong to, so the total and the rows beneath it always agree.
+  function reportDaySummary(events){
+    var night = 0, naps = 0, feeds = 0, meals = 0;
+    events.forEach(function(ev){
+      if (ev.kind === 'sleep'){ if (ev.night) night += ev.ms; else naps += ev.ms; }
+      else if (ev.kind === 'milk') feeds++;
+      else if (ev.kind === 'solids') meals++;
+    });
+    var bits = [];
+    if (night) bits.push(fmtDur(night) + ' night sleep');
+    if (naps) bits.push(fmtDur(naps) + ' of naps');
+    if (feeds) bits.push(plural(feeds, 'milk feed'));
+    if (meals) bits.push(plural(meals, 'meal'));
+    return bits.length ? bits.join(', ') + '.' : 'Nothing logged.';
+  }
+
+  // Built as a table because that is the shape the log is kept in, and a table
+  // survives being pasted into a document with its columns intact.
+  function buildReportHtml(days){
+    var events = reportEvents(days);
+    var byDay = [], index = {};
+    events.forEach(function(ev){
+      var key = dateKey(ev.at);
+      if (!index[key]){ index[key] = { at: ev.at, list: [] }; byDay.push(index[key]); }
+      index[key].list.push(ev);
+    });
+    var rows = '';
+    byDay.forEach(function(day){
+      rows += '<tr><td colspan="2" class="report-day"><strong>' +
+        escapeHtml(day.at.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })) +
+        '</strong> — ' + escapeHtml(reportDaySummary(day.list)) + '</td></tr>';
+      day.list.forEach(function(ev){
+        rows += '<tr><td class="report-when">' + escapeHtml(ev.when) + '</td>' +
+          '<td>' + escapeHtml(ev.text) + '</td></tr>';
+      });
+    });
+    if (!rows) rows = '<tr><td colspan="2">Nothing logged in this period.</td></tr>';
+    var first = new Date();
+    first.setDate(first.getDate() - (days - 1));
+    return '<h2 class="report-title">Sleep and feeding log</h2>' +
+      '<p class="report-range">' + escapeHtml(first.toLocaleDateString(undefined, { day: 'numeric', month: 'long' })) +
+        ' to ' + escapeHtml(new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })) +
+        ', ' + plural(days, 'day') + '.</p>' +
+      '<table class="report-table"><thead><tr><th>Time and date</th><th>What happened</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody></table>' +
+      '<h3 class="report-title">Questions, concerns and observations</h3>' +
+      '<p class="report-range">Add anything you want to raise on the call here.</p>';
+  }
+
+  function renderReport(){
+    Array.prototype.forEach.call(el('report-range').querySelectorAll('.unit-btn'), function(btn){
+      btn.setAttribute('aria-pressed', Number(btn.dataset.days) === reportDays ? 'true' : 'false');
+    });
+    el('report-body').innerHTML = buildReportHtml(reportDays);
+    var cutoff = new Date();
+    cutoff.setHours(0, 0, 0, 0);
+    cutoff.setDate(cutoff.getDate() - (reportDays - 1));
+    var missing = state.entries.filter(function(e){
+      return entryStart(e) >= cutoff && !e.settleNotes && !e.wakeNotes;
+    }).length;
+    el('report-hint').textContent = missing
+      ? plural(missing, 'sleep') + ' in this stretch ' + (missing === 1 ? 'has' : 'have') +
+        ' no settling or waking note, so those lines are times only. The notes are what tell the ' +
+        'consultant what you did and how he was.'
+      : 'Every sleep in this stretch has notes on it.';
+  }
+
+  el('report-btn').addEventListener('click', function(){ goTo('report'); renderReport(); });
+  el('report-range').addEventListener('click', function(ev){
+    var btn = ev.target.closest('.unit-btn');
+    if (!btn) return;
+    reportDays = Number(btn.dataset.days);
+    renderReport();
+  });
+  el('report-print').addEventListener('click', function(){ window.print(); });
+  el('report-copy').addEventListener('click', async function(){
+    var html = el('report-body').innerHTML;
+    var text = el('report-body').innerText;
+    try {
+      // Rich copy keeps the table when it is pasted into a document; the
+      // plain version is there for anything that cannot take HTML.
+      await navigator.clipboard.write([new window.ClipboardItem({
+        'text/html': new Blob([html], { type: 'text/html' }),
+        'text/plain': new Blob([text], { type: 'text/plain' })
+      })]);
+      showToast('Copied. Paste it into the document or an email.');
+    } catch (err) {
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast('Copied as plain text.');
+      } catch (e2) {
+        showToast('Copying is blocked here. Use Print or save as PDF instead.');
+      }
+    }
+  });
 
   // ======================================================
   // SLEEP

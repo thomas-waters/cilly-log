@@ -25,6 +25,16 @@
  */
 window.CILLY_CHANGELOG = [
   {
+    version: '1.11.0',
+    date: '2026-09-19',
+    title: 'A log for the sleep consultant',
+    notes: [
+      'Summary has a Consultant log: the last 3, 7 or 14 days written out as a table, a line per event in order, saying what happened and what the notes say about how he was.',
+      'Print it, save it as a PDF, or copy it and paste it straight into the document with its columns intact.',
+      'It says how many sleeps in the stretch have no settling or waking note, since those lines come out as times only.'
+    ]
+  },
+  {
     version: '1.10.1',
     date: '2026-09-19',
     title: 'Doses in millilitres',
