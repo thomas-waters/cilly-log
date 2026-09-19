@@ -25,6 +25,14 @@
  */
 window.CILLY_CHANGELOG = [
   {
+    version: '1.10.1',
+    date: '2026-09-19',
+    title: 'Doses in millilitres',
+    notes: [
+      'The dose on a medicine entry is a number of millilitres rather than free text, so "2.5" and "2.5ml" and "2.5 ML" cannot all mean the same thing. Anything already logged keeps its number.'
+    ]
+  },
+  {
     version: '1.10.0',
     date: '2026-09-19',
     title: 'Medicine is on',
