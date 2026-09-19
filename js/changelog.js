@@ -25,6 +25,45 @@
  */
 window.CILLY_CHANGELOG = [
   {
+    version: '1.15.0',
+    date: '2026-09-19',
+    title: 'Settings of your own, and Insights',
+    notes: [
+      'Summary is now Insights, in three tabs. Overview has the figures and how they compare with his age, Calendar has the month grid, and Share has the spreadsheet, the printout and the consultant log.',
+      'Each tab carries only the control that belongs to it. The 1 week / 4 weeks / 12 weeks choice used to sit above a month grid and an export it never had anything to do with; it is on Overview now, with a line saying what it changes.',
+      'Printing still prints all of it, whichever tab you are on.',
+      'Settings is now in two parts: Shared, which both phones see, and Just for you, which is kept on your account and changes nothing on the other phone.',
+      'Night mode and the time-to-settle chart have moved into Just for you, so one of you can have night mode without the other. Both keep whatever was set for them until you change them.',
+      'Anything under Just for you takes effect as you tap it; Save is for the shared settings.',
+      'A third section, About, says which version this phone is running and holds the change log.',
+      'Appearance: System, Light or Dark. System is what the app has always done — it follows whatever your phone is set to. Light and dark are both proper themes; this just lets you pick one and stay there.',
+      'The choice takes effect as you tap it, and the app opens in it next time rather than flashing the other one first.',
+      'Night mode still takes over between your night times, whichever you choose.'
+    ]
+  },
+  {
+    version: '1.14.0',
+    date: '2026-09-19',
+    title: 'A month at a glance',
+    notes: [
+      'Summary has a calendar of the month, each day green, amber or red: green if he got the sleep usual for his age, amber within an hour of it, red further below. A day with nothing logged is left empty rather than marked red, and today is not judged until the night has finished.',
+      'Every day shows its hours as well as its colour, and under the grid is the month in a line: how many days were enough, how many were short, and the average.',
+      'Colour by total sleep, night sleep or naps. A run of short nights is easier to see than to remember.',
+      'Tap a day to see that day in full — night, naps, feeds, meals and every sleep with its notes — then open it in the log to change anything.',
+      'Arrows or a swipe move between months, back as far as the first thing logged. Printing the Summary now includes the month.'
+    ]
+  },
+  {
+    version: '1.13.0',
+    date: '2026-09-19',
+    title: 'Night mode is now your choice',
+    notes: [
+      'Night mode has moved into Settings, and it starts off. Until you switch it on, the app looks the same at 3am as it does at noon.',
+      'Switched on, it works as before: between your night times the screen dims and the Sleep page drops to the toggle and the card, with "Show the rest" to bring everything back.',
+      'The choice is shared, like every other setting, so both phones follow it.'
+    ]
+  },
+  {
     version: '1.12.1',
     date: '2026-09-19',
     title: 'Blank screen at night fixed',

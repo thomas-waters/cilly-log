@@ -22,9 +22,32 @@ It holds real family records: treat the live data with care.
   them and `viewAllowed` keeps the page unreachable. Anything new that could
   be unwanted should go behind a flag the same way rather than being
   hard-wired in.
+- A flag says whether a feature exists here; it does not say a person wants
+  it. Night mode is both: the `nightMode` flag makes the Settings row exist,
+  and the `nightMode` preference (off by default, one parent's own) decides
+  whether the app actually dims — see `nightModeOn` in `js/app.js`. Anything
+  that changes how the app looks or behaves without being asked for should
+  default to off and be switchable in Settings the same way.
 - State changes are expressed as ops (`upsert`, `delete`, `status`,
-  `settings`) applied to an in-memory state and persisted through the store;
-  see `applyOps` and `commit` in `js/app.js`. Keep new features on that model.
+  `settings`, `prefs`) applied to an in-memory state and persisted through the
+  store; see `applyOps` and `commit` in `js/app.js`. Keep new features on that
+  model.
+- **Settings are shared, preferences are not.** `state.settings` is one
+  `app_state` row both phones read, so anything about Cillian or about how the
+  family logs belongs there. `state.prefs` is a row per person,
+  `prefs:<their email>`, written by the `prefs` op — anything that is one
+  parent's taste rather than a fact about the baby belongs there, and Settings
+  shows the two in separate sections. Neither needs a migration: both are rows
+  in the existing `app_state` table. Preferences are kept the moment they are
+  tapped rather than on Save, since none of them is anyone else's to weigh up.
+  `settleView` and `nightMode` were shared settings first; `personalChoice`
+  falls back to the settings row where a person has never chosen, so those old
+  keys are the value a phone inherits and should not be deleted. The
+  appearance choice (`theme`: `system`, `light` or `dark`) sets `data-theme`
+  on the root,
+  and is cached in `localStorage` so the script at the top of `index.html` can
+  paint the right palette before the database answers. That cache is also
+  seeded into `state.prefs` at startup, or the first render would wipe it.
 - Every page has the same shape: a card at the top opens a form in an overlay
   (`openOverlay` / `closeOverlay`), and saving shows a toast and closes it.
   Each overlay lives inside its own view, so only the current view's can be on
@@ -40,6 +63,26 @@ It holds real family records: treat the live data with care.
   it half an hour either side of the night start, `age` uses the band's own
   range. Any new clock time the guide shows should come from one of those
   two, not from a constant.
+- **Insights** (still `view-summary` and the `summary` view id in the code, so
+  saved views and the print rules keep working) is three tabs: Overview, the
+  figures and the age comparison for the chosen period; Calendar, the month
+  grid; Share, the exports. Each tab holds only the control that governs it —
+  a filter belongs beside what it filters, never above three blocks it does
+  not touch. Everything renders whatever tab is open, so switching is instant
+  and printing can unhide them all. Anything new goes in the tab whose job it
+  shares, or it needs a tab of its own.
+- The Calendar tab's **Month at a glance** answers one question — did he get
+  enough? —
+  so only a shortfall is coloured: at or above the range is green, within an
+  hour below is amber, further below is red (`monthDay` in `js/app.js`). The
+  range comes from `js/sleep-model.js` for his age **on that day**, so older
+  months are judged by the baby he was then. A day is not judged until its
+  night has finished (`dayComplete`), and a day with nothing logged is a
+  dotted cell, never red — the grid must never imply he slept badly when
+  nobody wrote it down. Every cell prints its hours as well as its colour,
+  because red and green look alike to plenty of people. Green is `--ok` /
+  `--ok-soft`, defined in all four palettes; the grid is also the one thing
+  that keeps its colours in print, where the rest of the page goes grey.
 
 ## Branches and deploys
 
@@ -79,9 +122,11 @@ It holds real family records: treat the live data with care.
 
 ## Exports
 
-There are three, all on the Summary page. The spreadsheet is one row per
-event for a chosen period. Printing the Summary gives the figures and the
-day-by-day table. The **Consultant log** (`view-report`) writes the days out
+There are three, all on the Share tab of Insights. The spreadsheet is one row
+per event for a chosen period. Printing gives the whole of Insights — the
+figures, the age comparison, the month grid and the day-by-day table —
+whichever tab is open, because `@media print` unhides the other tab panels.
+The **Consultant log** (`view-report`) writes the days out
 instead: a two-column table, a line per event in order, in the shape a sleep
 consultant asks for — what happened, what you did, how he was. Keep it to two
 columns and one event per row: that is the shape the consultant keeps the log
@@ -89,8 +134,8 @@ in, and the page and the Word file are both built from `reportRows` so they
 cannot drift apart. The settle and wake notes are what carry "what you did"
 and "how he was", so a sleep logged without them comes out as bare times and
 the page says how many of those there are. It can be printed, copied as HTML,
-or saved as a .docx. Printing prints whichever view is open, not always the
-Summary.
+or saved as a .docx. Printing prints whichever view is open, not always
+Insights.
 
 ## Checks
 

@@ -9,17 +9,27 @@
  */
 (function(){
   var STATE_KEY = 'cilly-log.state';
+  // One app_state row per person: 'prefs:someone@example.com'. The key is the
+  // address they signed in with, so the rows cannot collide and each phone
+  // reads only its own.
+  var PREFS_PREFIX = 'prefs:';
 
   function emptyState(){
     return {
       status: { asleep: false, since: null, settleNotes: '', putDown: '' },
       // bedtimeBasis: 'night' aims bedtime at nightStart, 'age' at the
       // published range for the age band. See bedtimeRange in js/app.js.
-      // settleView: 'total' or 'average' minutes per day in the settle chart.
+      // settleView and nightMode were shared before they became one person's
+      // choice. They stay here as the value a phone inherits until whoever is
+      // on it picks for themselves - see personalChoice in js/app.js.
       settings: {
         dob: '', nightStart: '19:00', nightEnd: '06:00', milkUnit: 'ml',
-        bedtimeBasis: 'night', settleView: 'total'
+        bedtimeBasis: 'night', settleView: 'total', nightMode: false
       },
+      // Settings are shared: both phones read the same row. Preferences are
+      // not - they are stored per signed-in person, so one parent choosing a
+      // light app does not change the other's.
+      prefs: { theme: 'system' },
       entries: [],
       feeds: [],
       solids: [],
@@ -36,6 +46,7 @@
     var base = emptyState();
     s.status = Object.assign(base.status, s.status || {});
     s.settings = Object.assign(base.settings, s.settings || {});
+    s.prefs = Object.assign(base.prefs, s.prefs || {});
     s.entries = Array.isArray(s.entries) ? s.entries : [];
     s.feeds = Array.isArray(s.feeds) ? s.feeds : [];
     s.solids = Array.isArray(s.solids) ? s.solids : [];
@@ -162,9 +173,14 @@
       // the migration run simply has no doses, rather than failing to load.
       var meds = await client.from('meds').select('*');
       state.meds = meds.error ? [] : meds.data.map(rowToMed);
+      // Everyone's preferences live in the same table, one row each, keyed by
+      // the address they signed in with. Only this person's row is read, so
+      // the other parent's choices never reach this phone.
+      var me = await whoAmI();
       results[3].data.forEach(function(row){
         if (row.key === 'status') state.status = Object.assign(state.status, row.value || {});
         if (row.key === 'settings') state.settings = Object.assign(state.settings, row.value || {});
+        if (me && row.key === PREFS_PREFIX + me) state.prefs = Object.assign(state.prefs, row.value || {});
       });
       // Names are a nicety: if the table has no display names yet, entries
       // simply show no chip.
@@ -202,6 +218,11 @@
           res = await client.from('app_state').upsert({ key: 'status', value: op.status });
         }
         else if (op.type === 'settings') res = await client.from('app_state').upsert({ key: 'settings', value: op.settings });
+        else if (op.type === 'prefs'){
+          // Nothing to write to if we do not know who this is; the choice
+          // still applies on this device from its own cache.
+          if (me) res = await client.from('app_state').upsert({ key: PREFS_PREFIX + me, value: op.prefs });
+        }
         if (res && res.error) throw res.error;
       }
     }
