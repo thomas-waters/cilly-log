@@ -110,11 +110,16 @@
     }
     return e.date;
   }
+  // Minutes between being put down and falling asleep, or null when there is
+  // no put-down time to work from. A gap over six hours means the two times
+  // are the wrong way round rather than a very long settle, so it does not
+  // count; sleepMetaHtml says so on the entry instead of showing nothing.
+  var SETTLE_MAX = 360;
   function settleMinutes(e){
     if (!e.putDown) return null;
     var d = minutesOf(e.start) - minutesOf(e.putDown);
     if (d < 0) d += 1440;
-    return d > 360 ? null : d;
+    return d > SETTLE_MAX ? null : d;
   }
   function ageMonths(dobStr, at){
     var dob = new Date(dobStr + 'T00:00:00');
@@ -204,6 +209,10 @@
   function bedtimeSource(){
     return bedtimeBasis() === 'age' ? 'typical for this age' : 'around the night start in Settings';
   }
+  // Whether the settle chart adds a day's settling up or averages it.
+  function settleView(){
+    return (state.settings || {}).settleView === 'average' ? 'average' : 'total';
+  }
 
   var POSITION_WORDS = { first: 'before the first nap', mid: 'between naps', last: 'before bed' };
 
@@ -274,6 +283,9 @@
     if (isNight(e)) bits.push('<span class="meta-tag">Night</span>');
     var s = settleMinutes(e);
     if (s !== null) bits.push('<span>' + (s === 0 ? 'Asleep on put-down' : 'Settled in ' + s + 'm') + '</span>');
+    // A put-down that cannot produce a settling time used to show nothing at
+    // all, which read as "no put-down was logged". Say which it is.
+    else if (e.putDown) bits.push('<span class="meta-warn">Put down at ' + fmtClock(minutesOf(e.putDown)) + ', after the asleep time</span>');
     var who = personChip(e);
     if (who) bits.push(who);
     return bits.length ? '<span class="entry-meta">' + bits.join('') + '</span>' : '';
@@ -1161,19 +1173,25 @@
 
   function renderSettleTrend(){
     var days = chartDays(), byKey = {}, todayKey = dateKey(new Date());
+    var total = settleView() === 'total';
     days.forEach(function(d){ d.sum = 0; d.count = 0; byKey[d.key] = d; });
     state.entries.forEach(function(e){
       var s = settleMinutes(e); var d = byKey[e.date];
       if (s === null || !d) return;
       d.sum += s; d.count++;
     });
+    el('settle-range').textContent = (total ? 'Daily total' : 'Daily average') + ', last 14 days';
     renderBars('settle-wrap', {
-      label: 'Average minutes to settle per day, last 14 days',
+      label: (total ? 'Total' : 'Average') + ' minutes to settle per day, last 14 days',
       days: days.map(function(d){
-        var avg = d.count ? d.sum / d.count : 0;
+        var value = d.count ? (total ? d.sum : d.sum / d.count) : 0;
         return { key: d.key, date: d.date,
-          segments: [{ minutes: avg, cls: 'chart-seg-night' }],
-          tip: dayLabel(d, todayKey) + ' · ' + (d.count ? Math.round(avg) + 'm to settle on average (' + plural(d.count, 'sleep') + ')' : 'No put-down times logged') };
+          segments: [{ minutes: value, cls: 'chart-seg-night' }],
+          tip: dayLabel(d, todayKey) + ' · ' + (d.count
+            ? (total
+              ? Math.round(value) + 'm settling across ' + plural(d.count, 'sleep')
+              : Math.round(value) + 'm to settle on average (' + plural(d.count, 'sleep') + ')')
+            : 'No put-down times logged') };
       }),
       niceMax: function(m){ var steps = [5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 240, 360]; for (var i = 0; i < steps.length; i++){ if (steps[i] >= m) return steps[i]; } return Math.ceil(m); },
       yLabel: function(m){ return Math.round(m) + 'm'; },
@@ -1875,6 +1893,22 @@
   });
   el('set-night-start').addEventListener('input', renderBedtimeBasis);
 
+  var draftSettle = 'total';
+  function renderSettleChoice(){
+    Array.prototype.forEach.call(el('set-settle-view').querySelectorAll('.unit-btn'), function(btn){
+      btn.setAttribute('aria-pressed', btn.dataset.settle === draftSettle ? 'true' : 'false');
+    });
+    el('set-settle-hint').textContent = draftSettle === 'total'
+      ? 'Each bar adds up all the settling that day, so a day with three hard naps stands out.'
+      : 'Each bar is the average settle for one sleep that day, so days are comparable however many sleeps they had.';
+  }
+  el('set-settle-view').addEventListener('click', function(ev){
+    var btn = ev.target.closest('.unit-btn');
+    if (!btn) return;
+    draftSettle = btn.dataset.settle;
+    renderSettleChoice();
+  });
+
   function openSettings(){
     if (readOnly) return;
     var s = state.settings || {};
@@ -1883,6 +1917,8 @@
     el('set-night-end').value = s.nightEnd || '06:00';
     draftBasis = bedtimeBasis();
     renderBedtimeBasis();
+    draftSettle = settleView();
+    renderSettleChoice();
     hideError('set-error');
     openOverlay('settings-overlay');
     el('set-dob').focus();
@@ -1966,7 +2002,9 @@
     if (dob && dob > dateKey(new Date())){ showError('set-error', 'The date of birth can’t be in the future.', 'set-dob'); return; }
     if (!ns || !ne){ showError('set-error', 'Enter both night times.', ns ? 'set-night-end' : 'set-night-start'); return; }
     closeSettings();
-    await commit([{ type: 'settings', settings: Object.assign({}, state.settings, { dob: dob, nightStart: ns, nightEnd: ne, bedtimeBasis: draftBasis }) }]);
+    await commit([{ type: 'settings', settings: Object.assign({}, state.settings, {
+      dob: dob, nightStart: ns, nightEnd: ne, bedtimeBasis: draftBasis, settleView: draftSettle
+    }) }]);
   });
 
   function renderHome(){

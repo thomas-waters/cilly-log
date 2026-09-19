@@ -8,6 +8,15 @@
  */
 window.CILLY_CHANGELOG = [
   {
+    version: '1.14',
+    date: '2026-09-19',
+    title: 'Settling times',
+    notes: [
+      'A sleep with a put-down time later than the asleep time showed nothing at all, which looked the same as never having logged one. It now says so on the entry, so it can be corrected.',
+      'Time to settle adds up all the settling in a day instead of averaging it. Settings can switch it back to the average per sleep.'
+    ]
+  },
+  {
     version: '1.13',
     date: '2026-09-18',
     title: 'This change log',
