@@ -22,12 +22,12 @@ It holds real family records: treat the live data with care.
   them and `viewAllowed` keeps the page unreachable. Anything new that could
   be unwanted should go behind a flag the same way rather than being
   hard-wired in.
-- A flag says whether a feature exists here; it does not say a family wants
+- A flag says whether a feature exists here; it does not say a person wants
   it. Night mode is both: the `nightMode` flag makes the Settings row exist,
-  and the `nightMode` setting (off by default, shared between the phones)
-  decides whether the app actually dims — see `nightModeOn` in `js/app.js`.
-  Anything that changes how the app looks or behaves without being asked for
-  should default to off and be switchable in Settings the same way.
+  and the `nightMode` preference (off by default, one parent's own) decides
+  whether the app actually dims — see `nightModeOn` in `js/app.js`. Anything
+  that changes how the app looks or behaves without being asked for should
+  default to off and be switchable in Settings the same way.
 - State changes are expressed as ops (`upsert`, `delete`, `status`,
   `settings`, `prefs`) applied to an in-memory state and persisted through the
   store; see `applyOps` and `commit` in `js/app.js`. Keep new features on that
@@ -38,8 +38,13 @@ It holds real family records: treat the live data with care.
   `prefs:<their email>`, written by the `prefs` op — anything that is one
   parent's taste rather than a fact about the baby belongs there, and Settings
   shows the two in separate sections. Neither needs a migration: both are rows
-  in the existing `app_state` table. The appearance choice (`theme`: `system`,
-  `light` or `dark`) is the first of them: it sets `data-theme` on the root,
+  in the existing `app_state` table. Preferences are kept the moment they are
+  tapped rather than on Save, since none of them is anyone else's to weigh up.
+  `settleView` and `nightMode` were shared settings first; `personalChoice`
+  falls back to the settings row where a person has never chosen, so those old
+  keys are the value a phone inherits and should not be deleted. The
+  appearance choice (`theme`: `system`, `light` or `dark`) sets `data-theme`
+  on the root,
   and is cached in `localStorage` so the script at the top of `index.html` can
   paint the right palette before the database answers. That cache is also
   seeded into `state.prefs` at startup, or the first render would wipe it.

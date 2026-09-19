@@ -19,9 +19,9 @@
       status: { asleep: false, since: null, settleNotes: '', putDown: '' },
       // bedtimeBasis: 'night' aims bedtime at nightStart, 'age' at the
       // published range for the age band. See bedtimeRange in js/app.js.
-      // settleView: 'total' or 'average' minutes per day in the settle chart.
-      // nightMode: dim the app and strip the Sleep page back during night
-      // hours. Off unless it is switched on in Settings.
+      // settleView and nightMode were shared before they became one person's
+      // choice. They stay here as the value a phone inherits until whoever is
+      // on it picks for themselves - see personalChoice in js/app.js.
       settings: {
         dob: '', nightStart: '19:00', nightEnd: '06:00', milkUnit: 'ml',
         bedtimeBasis: 'night', settleView: 'total', nightMode: false

@@ -238,14 +238,21 @@
     return bedtimeBasis() === 'age' ? 'typical for this age' : 'around the night start in Settings';
   }
   // Whether the settle chart adds a day's settling up or averages it.
+  // Both of these were shared settings before they were personal ones. Where
+  // someone has never chosen, the old shared value still stands in, so moving
+  // them changed nobody's app on the day it shipped. Leave those old keys in
+  // the settings row: they are what a new phone inherits.
+  function personalChoice(name){
+    var mine = (state.prefs || {})[name];
+    return mine === undefined ? (state.settings || {})[name] : mine;
+  }
   function settleView(){
-    return (state.settings || {}).settleView === 'average' ? 'average' : 'total';
+    return personalChoice('settleView') === 'average' ? 'average' : 'total';
   }
   // Night mode is asked for, not assumed: an app that dims and hides most of a
-  // page on its own is a surprise at 3am, and it only suits some people. The
-  // stored choice is read on its own so a phone where the flag is off still
-  // keeps whatever the other phone chose.
-  function nightModeSetting(){ return (state.settings || {}).nightMode === true; }
+  // page on its own is a surprise at 3am, and it only suits some people. It is
+  // one person's choice too - one parent can have it while the other does not.
+  function nightModeSetting(){ return personalChoice('nightMode') === true; }
   function nightModeOn(){ return FEATURES.nightMode && nightModeSetting(); }
 
   var POSITION_WORDS = { first: 'before the first nap', mid: 'between naps', last: 'before bed' };
@@ -2899,38 +2906,50 @@
   el('set-night-start').addEventListener('input', function(){ renderBedtimeBasis(); renderNightChoice(); });
   el('set-night-end').addEventListener('input', renderNightChoice);
 
-  var draftSettle = 'total';
+  // Everything under "Just for you" is kept the moment it is tapped. None of
+  // it is anyone else's, so there is nothing for Save or Cancel to weigh up,
+  // and all three are things you want to see the effect of before deciding.
+  function keepPref(name, value){
+    var next = {};
+    next[name] = value;
+    commit([{ type: 'prefs', prefs: Object.assign({}, state.prefs, next) }]);
+  }
+
   function renderSettleChoice(){
+    var choice = settleView();
     Array.prototype.forEach.call(el('set-settle-view').querySelectorAll('.unit-btn'), function(btn){
-      btn.setAttribute('aria-pressed', btn.dataset.settle === draftSettle ? 'true' : 'false');
+      btn.setAttribute('aria-pressed', btn.dataset.settle === choice ? 'true' : 'false');
     });
-    el('set-settle-hint').textContent = draftSettle === 'total'
+    el('set-settle-hint').textContent = choice === 'total'
       ? 'Each bar adds up all the settling that day, so a day with three hard naps stands out.'
       : 'Each bar is the average settle for one sleep that day, so days are comparable however many sleeps they had.';
   }
   el('set-settle-view').addEventListener('click', function(ev){
     var btn = ev.target.closest('.unit-btn');
-    if (!btn) return;
-    draftSettle = btn.dataset.settle;
+    if (!btn || btn.dataset.settle === settleView()) return;
+    keepPref('settleView', btn.dataset.settle);
     renderSettleChoice();
   });
 
-  var draftNightMode = false;
   function renderNightChoice(){
+    var on = nightModeSetting();
     Array.prototype.forEach.call(el('set-night-mode').querySelectorAll('.unit-btn'), function(btn){
-      btn.setAttribute('aria-pressed', (btn.dataset.night === 'on') === draftNightMode ? 'true' : 'false');
+      btn.setAttribute('aria-pressed', (btn.dataset.night === 'on') === on ? 'true' : 'false');
     });
+    // The night times are in the other section and are saved rather than
+    // instant, so the hint quotes the fields as typed, not what is stored.
     var from = fmtClock(minutesOf(el('set-night-start').value || '19:00'));
     var to = fmtClock(minutesOf(el('set-night-end').value || '06:00'));
-    el('set-night-mode-hint').textContent = draftNightMode
+    el('set-night-mode-hint').textContent = on
       ? 'Between ' + from + ' and ' + to + ' the screen dims and the Sleep page drops to the toggle and the card. "Show the rest" brings it back.'
       : 'The app looks the same at 3am as it does at noon.';
   }
   el('set-night-mode').addEventListener('click', function(ev){
     var btn = ev.target.closest('.unit-btn');
-    if (!btn) return;
-    draftNightMode = btn.dataset.night === 'on';
+    if (!btn || (btn.dataset.night === 'on') === nightModeSetting()) return;
+    keepPref('nightMode', btn.dataset.night === 'on');
     renderNightChoice();
+    renderThemeChoice(); // its hint mentions night mode
   });
 
   // The name on the other account, where there is exactly one, so the section
@@ -2957,13 +2976,10 @@
       ? 'Kept on your account' + (other ? ', not ' + other + '’s.' : ', so the other phone keeps its own.')
       : 'Kept on this device.';
   }
-  // Applied and kept as it is tapped. An appearance you cannot see until you
-  // press Save is no way to choose one, and since it is nobody else's, there
-  // is nothing for Save or Cancel to weigh up.
   el('set-theme').addEventListener('click', function(ev){
     var btn = ev.target.closest('.unit-btn');
     if (!btn || btn.dataset.theme === themeChoice()) return;
-    commit([{ type: 'prefs', prefs: Object.assign({}, state.prefs, { theme: btn.dataset.theme }) }]);
+    keepPref('theme', btn.dataset.theme);
     renderThemeChoice();
   });
 
@@ -2975,9 +2991,7 @@
     el('set-night-end').value = s.nightEnd || '06:00';
     draftBasis = bedtimeBasis();
     renderBedtimeBasis();
-    draftSettle = settleView();
     renderSettleChoice();
-    draftNightMode = nightModeSetting();
     renderNightChoice();
     renderThemeChoice();
     hideError('set-error');
@@ -3065,9 +3079,11 @@
     if (dob && dob > dateKey(new Date())){ showError('set-error', 'The date of birth can’t be in the future.', 'set-dob'); return; }
     if (!ns || !ne){ showError('set-error', 'Enter both night times.', ns ? 'set-night-end' : 'set-night-start'); return; }
     closeSettings();
+    // Night mode and the settle chart used to be saved here. They are one
+    // person's choice now, kept the moment they are tapped, and whatever this
+    // row still holds for them stands in for anyone who has not chosen.
     await commit([{ type: 'settings', settings: Object.assign({}, state.settings, {
-      dob: dob, nightStart: ns, nightEnd: ne, bedtimeBasis: draftBasis,
-      settleView: draftSettle, nightMode: draftNightMode
+      dob: dob, nightStart: ns, nightEnd: ne, bedtimeBasis: draftBasis
     }) }]);
   });
 
