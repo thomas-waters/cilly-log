@@ -1082,54 +1082,41 @@
     return out.sort(function(a, b){ return a.at - b.at; });
   }
 
-  // Counted from the lines listed under the heading rather than from the night
-  // they belong to, so the total and the rows beneath it always agree.
-  function reportDaySummary(events){
-    var night = 0, naps = 0, feeds = 0, meals = 0;
-    events.forEach(function(ev){
-      if (ev.kind === 'sleep'){ if (ev.night) night += ev.ms; else naps += ev.ms; }
-      else if (ev.kind === 'milk') feeds++;
-      else if (ev.kind === 'solids') meals++;
+  // Two columns and nothing else, which is the shape the consultant keeps the
+  // log in: every row is one event, the date and time on the left, what
+  // happened on the right. The page and the Word file are built from this same
+  // list, so they cannot drift apart.
+  var REPORT_TITLE = 'Sleep and feeding log';
+  function reportRows(days){
+    return reportEvents(days).map(function(ev){
+      var date = ev.at.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+      return [date + '\n' + ev.when, ev.text];
     });
-    var bits = [];
-    if (night) bits.push(fmtDur(night) + ' night sleep');
-    if (naps) bits.push(fmtDur(naps) + ' of naps');
-    if (feeds) bits.push(plural(feeds, 'milk feed'));
-    if (meals) bits.push(plural(meals, 'meal'));
-    return bits.length ? bits.join(', ') + '.' : 'Nothing logged.';
   }
-
-  // Built as a table because that is the shape the log is kept in, and a table
-  // survives being pasted into a document with its columns intact.
-  function buildReportHtml(days){
-    var events = reportEvents(days);
-    var byDay = [], index = {};
-    events.forEach(function(ev){
-      var key = dateKey(ev.at);
-      if (!index[key]){ index[key] = { at: ev.at, list: [] }; byDay.push(index[key]); }
-      index[key].list.push(ev);
-    });
-    var rows = '';
-    byDay.forEach(function(day){
-      rows += '<tr><td colspan="2" class="report-day"><strong>' +
-        escapeHtml(day.at.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })) +
-        '</strong> — ' + escapeHtml(reportDaySummary(day.list)) + '</td></tr>';
-      day.list.forEach(function(ev){
-        rows += '<tr><td class="report-when">' + escapeHtml(ev.when) + '</td>' +
-          '<td>' + escapeHtml(ev.text) + '</td></tr>';
-      });
-    });
-    if (!rows) rows = '<tr><td colspan="2">Nothing logged in this period.</td></tr>';
+  function reportSubtitle(days){
     var first = new Date();
     first.setDate(first.getDate() - (days - 1));
-    return '<h2 class="report-title">Sleep and feeding log</h2>' +
-      '<p class="report-range">' + escapeHtml(first.toLocaleDateString(undefined, { day: 'numeric', month: 'long' })) +
-        ' to ' + escapeHtml(new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })) +
-        ', ' + plural(days, 'day') + '.</p>' +
+    return first.toLocaleDateString(undefined, { day: 'numeric', month: 'long' }) +
+      ' to ' + new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) +
+      ', ' + plural(days, 'day') + '.';
+  }
+  var REPORT_TAIL = [
+    { text: 'Questions, concerns and observations', bold: true },
+    { text: 'Add anything you want to raise on the call here.' }
+  ];
+
+  function buildReportHtml(days){
+    var rows = reportRows(days).map(function(r){
+      return '<tr><td class="report-when">' + escapeHtml(r[0]).replace(/\n/g, '<br>') + '</td>' +
+        '<td>' + escapeHtml(r[1]) + '</td></tr>';
+    }).join('');
+    if (!rows) rows = '<tr><td class="report-when">—</td><td>Nothing logged in this period.</td></tr>';
+    return '<h2 class="report-title">' + REPORT_TITLE + '</h2>' +
+      '<p class="report-range">' + escapeHtml(reportSubtitle(days)) + '</p>' +
       '<table class="report-table"><thead><tr><th>Time and date</th><th>What happened</th></tr></thead>' +
       '<tbody>' + rows + '</tbody></table>' +
-      '<h3 class="report-title">Questions, concerns and observations</h3>' +
-      '<p class="report-range">Add anything you want to raise on the call here.</p>';
+      '<h3 class="report-title">' + REPORT_TAIL[0].text + '</h3>' +
+      '<p class="report-range">' + REPORT_TAIL[1].text + '</p>';
   }
 
   function renderReport(){
@@ -1158,6 +1145,29 @@
     renderReport();
   });
   el('report-print').addEventListener('click', function(){ window.print(); });
+  el('report-docx').addEventListener('click', function(){
+    try {
+      var bytes = window.CillyDocx.build({
+        title: REPORT_TITLE,
+        subtitle: reportSubtitle(reportDays),
+        header: ['Time and date', 'What happened'],
+        rows: reportRows(reportDays),
+        tail: REPORT_TAIL
+      });
+      var blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'cilly-log-' + dateKey(new Date()) + '.docx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+      showToast('Saved as a Word document.');
+    } catch (err) {
+      showToast('Could not build the document. Use Print or save as PDF instead.');
+    }
+  });
   el('report-copy').addEventListener('click', async function(){
     var html = el('report-body').innerHTML;
     var text = el('report-body').innerText;

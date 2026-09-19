@@ -7,8 +7,9 @@ It holds real family records: treat the live data with care.
 
 - Plain HTML/CSS/JS, no build step. `index.html` is the shell, `css/app.css`
   the styles, `js/app.js` the app, `js/store.js` the storage adapters,
-  `js/config.js` the public client config, and `js/sleep-model.js` the
-  by-age sleep ranges the guide is built on.
+  `js/config.js` the public client config, `js/sleep-model.js` the by-age
+  sleep ranges the guide is built on, and `js/docx.js` a small ZIP and
+  WordprocessingML writer used by the consultant log.
 - Data lives in Supabase (project `hopvsalkhtgrqbbkioqn`), schema in
   `supabase/schema.sql`. Access is row-level security: only emails in
   `allowed_users` can read or write. Sign-in is Google only; the emailed
@@ -82,10 +83,14 @@ There are three, all on the Summary page. The spreadsheet is one row per
 event for a chosen period. Printing the Summary gives the figures and the
 day-by-day table. The **Consultant log** (`view-report`) writes the days out
 instead: a two-column table, a line per event in order, in the shape a sleep
-consultant asks for — what happened, what you did, how he was. The settle and
-wake notes are what carry the last two, so a sleep logged without them comes
-out as bare times and the page says how many of those there are. Printing
-prints whichever view is open, not always the Summary.
+consultant asks for — what happened, what you did, how he was. Keep it to two
+columns and one event per row: that is the shape the consultant keeps the log
+in, and the page and the Word file are both built from `reportRows` so they
+cannot drift apart. The settle and wake notes are what carry "what you did"
+and "how he was", so a sleep logged without them comes out as bare times and
+the page says how many of those there are. It can be printed, copied as HTML,
+or saved as a .docx. Printing prints whichever view is open, not always the
+Summary.
 
 ## Checks
 

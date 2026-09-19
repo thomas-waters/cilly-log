@@ -265,7 +265,6 @@
   }
   .report-table thead th{ background:var(--surface-2); font-size:0.75rem; text-transform:uppercase; letter-spacing:.04em; }
   .report-when{ white-space:nowrap; width:1%; font-variant-numeric:tabular-nums; }
-  .report-day{ background:var(--surface-2); font-size:0.82rem; }
 
   .chips-label{ font-size:0.72rem; font-weight:600; color:var(--ink-soft); align-self:center; margin-right:2px; }
   .form-hint{ margin:0; font-size:0.78rem; color:var(--ink-soft); line-height:1.4; }
