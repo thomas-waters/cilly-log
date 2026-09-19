@@ -15,7 +15,11 @@
       status: { asleep: false, since: null, settleNotes: '', putDown: '' },
       // bedtimeBasis: 'night' aims bedtime at nightStart, 'age' at the
       // published range for the age band. See bedtimeRange in js/app.js.
-      settings: { dob: '', nightStart: '19:00', nightEnd: '06:00', milkUnit: 'ml', bedtimeBasis: 'night' },
+      // settleView: 'total' or 'average' minutes per day in the settle chart.
+      settings: {
+        dob: '', nightStart: '19:00', nightEnd: '06:00', milkUnit: 'ml',
+        bedtimeBasis: 'night', settleView: 'total'
+      },
       entries: [],
       feeds: [],
       solids: [],

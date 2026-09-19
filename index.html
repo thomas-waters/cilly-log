@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#5B54D6">
   <title>Cilly Log</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
-  <link rel="stylesheet" href="css/app.css?v=20260918-2336">
+  <link rel="stylesheet" href="css/app.css?v=20260919-1134">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -147,6 +147,15 @@
           </div>
           <p class="form-hint" id="set-bedtime-hint"></p>
         </div>
+
+        <div class="field">
+          <span class="field-label" id="set-settle-label">Time to settle chart</span>
+          <div class="unit-toggle basis-toggle" id="set-settle-view" role="group" aria-labelledby="set-settle-label">
+            <button type="button" class="unit-btn" data-settle="total" aria-pressed="true">Total a day</button>
+            <button type="button" class="unit-btn" data-settle="average" aria-pressed="false">Average a sleep</button>
+          </div>
+          <p class="form-hint" id="set-settle-hint"></p>
+        </div>
         <div class="field">
           <button type="button" class="btn ghost" id="changelog-btn">Change log</button>
         </div>
@@ -248,7 +257,7 @@
     <section class="panel" aria-label="Time to settle">
       <div class="panel-head">
         <h2>Time to settle</h2>
-        <span class="chart-range">Daily average, last 14 days</span>
+        <span class="chart-range" id="settle-range">Last 14 days</span>
       </div>
       <div class="chart-wrap" id="settle-wrap"></div>
     </section>
@@ -294,6 +303,7 @@
           <button type="button" class="chip" data-before="20">20m before</button>
           <button type="button" class="chip" data-before="30">30m before</button>
         </div>
+        <p class="form-hint" id="f-putdown-hint" hidden>Optional, but a put-down time is what gives you the settling figures.</p>
         <div class="field" id="field-end">
           <label for="f-end">Woke at</label>
           <input type="time" id="f-end">
@@ -615,10 +625,10 @@
 
 <div class="toast" id="toast" hidden></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/config.js?v=20260918-2336"></script>
-<script src="js/store.js?v=20260918-2336"></script>
-<script src="js/changelog.js?v=20260918-2336"></script>
-<script src="js/sleep-model.js?v=20260918-2336"></script>
-<script src="js/app.js?v=20260918-2336"></script>
+<script src="js/config.js?v=20260919-1134"></script>
+<script src="js/store.js?v=20260919-1134"></script>
+<script src="js/changelog.js?v=20260919-1134"></script>
+<script src="js/sleep-model.js?v=20260919-1134"></script>
+<script src="js/app.js?v=20260919-1134"></script>
 </body>
 </html>

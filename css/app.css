@@ -187,6 +187,8 @@
     border-radius:5px;
     padding:1px 5px;
   }
+  .meta-warn{ color:var(--warn); font-weight:600; }
+  .meta-quiet{ opacity:.7; font-style:italic; }
   .chips-label{ font-size:0.72rem; font-weight:600; color:var(--ink-soft); align-self:center; margin-right:2px; }
   .form-hint{ margin:0; font-size:0.78rem; color:var(--ink-soft); line-height:1.4; }
 

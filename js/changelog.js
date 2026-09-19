@@ -8,6 +8,18 @@
  */
 window.CILLY_CHANGELOG = [
   {
+    version: '1.14',
+    date: '2026-09-19',
+    title: 'Settling times',
+    notes: [
+      'A put-down time that cannot come before the sleep is now refused when you save, rather than quietly producing no settling time at all.',
+      'A put-down more than three hours before they fell asleep asks whether that is right before saving it.',
+      'A sleep already saved with times that do not fit says so on the entry, so it can be found and corrected.',
+      'A sleep with no put-down time says "No put-down" rather than showing nothing, and the form says what a put-down time is for. It is still optional.',
+      'Time to settle adds up all the settling in a day instead of averaging it. Settings can switch it back to the average per sleep.'
+    ]
+  },
+  {
     version: '1.13',
     date: '2026-09-18',
     title: 'This change log',

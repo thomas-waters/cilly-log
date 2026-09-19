@@ -110,11 +110,27 @@
     }
     return e.date;
   }
+  // Minutes from being put down to falling asleep, wrapping over midnight so
+  // "down at 23:50, asleep at 00:10" reads as 20 minutes.
+  function settleGap(putDown, start){
+    var d = minutesOf(start) - minutesOf(putDown);
+    if (d < 0) d += 1440;
+    return d;
+  }
+  // Over twelve hours apart the pair cannot be a settle: on a 24 hour clock
+  // that is nearer to the put-down being after the sleep than before it, and
+  // an hour typed as 09:15 instead of 21:15 lands exactly here. The form
+  // refuses to save one, and anything already saved says so on the entry.
+  var SETTLE_MAX = 720;
+  // Beyond three hours the form asks whether it is really right.
+  var SETTLE_CONFIRM = 180;
+  // From here up it reads as a put-down after the sleep rather than a long one.
+  var SETTLE_INVERTED = 1080;
+
   function settleMinutes(e){
     if (!e.putDown) return null;
-    var d = minutesOf(e.start) - minutesOf(e.putDown);
-    if (d < 0) d += 1440;
-    return d > 360 ? null : d;
+    var d = settleGap(e.putDown, e.start);
+    return d >= SETTLE_MAX ? null : d;
   }
   function ageMonths(dobStr, at){
     var dob = new Date(dobStr + 'T00:00:00');
@@ -204,6 +220,10 @@
   function bedtimeSource(){
     return bedtimeBasis() === 'age' ? 'typical for this age' : 'around the night start in Settings';
   }
+  // Whether the settle chart adds a day's settling up or averages it.
+  function settleView(){
+    return (state.settings || {}).settleView === 'average' ? 'average' : 'total';
+  }
 
   var POSITION_WORDS = { first: 'before the first nap', mid: 'between naps', last: 'before bed' };
 
@@ -274,6 +294,16 @@
     if (isNight(e)) bits.push('<span class="meta-tag">Night</span>');
     var s = settleMinutes(e);
     if (s !== null) bits.push('<span>' + (s === 0 ? 'Asleep on put-down' : 'Settled in ' + s + 'm') + '</span>');
+    // A put-down that cannot produce a settling time used to show nothing at
+    // all, which read as "no put-down was logged". Say which it is.
+    else if (e.putDown){
+      var gap = settleGap(e.putDown, e.start);
+      bits.push('<span class="meta-warn">Put down at ' + fmtClock(minutesOf(e.putDown)) +
+        (gap >= SETTLE_INVERTED ? ', after the asleep time' : ', ' + fmtDur(gap * 60000) + ' before') + '</span>');
+    }
+    // Saying so is the difference between "nothing to show" and "nobody wrote
+    // it down". The entry is still perfectly valid without one.
+    else bits.push('<span class="meta-quiet">No put-down</span>');
     var who = personChip(e);
     if (who) bits.push(who);
     return bits.length ? '<span class="entry-meta">' + bits.join('') + '</span>' : '';
@@ -360,12 +390,43 @@
     el('confirm-text').textContent = opts.text;
     el('confirm-yes').textContent = opts.confirmLabel || 'Delete';
     el('confirm-no').textContent = opts.keepLabel || 'Keep it';
+    // Red is for the ones that throw something away. A "yes, that is right"
+    // should not look like a delete.
+    el('confirm-yes').className = 'btn ' + (opts.tone === 'primary' ? 'primary' : 'danger');
     openOverlay('confirm-overlay');
     el('confirm-no').focus();
   }
   function closeConfirm(){
     closeOverlay('confirm-overlay');
     pendingConfirm = null;
+  }
+
+  // A put-down has to come before the sleep it belongs to. Anything that
+  // cannot is refused outright; anything unusually long is queried rather than
+  // refused, because a genuinely hard night does happen.
+  function guardPutDown(putDown, start, proceed){
+    if (!putDown || !start){ proceed(); return; }
+    var gap = settleGap(putDown, start);
+    var downAt = fmtClock(minutesOf(putDown)), asleepAt = fmtClock(minutesOf(start));
+    if (gap >= SETTLE_MAX){
+      showError('form-error', gap >= SETTLE_INVERTED
+        ? 'Put down at ' + downAt + ' is after they fell asleep at ' + asleepAt + '. Change one of them.'
+        : 'Put down at ' + downAt + ' is ' + fmtDur(gap * 60000) + ' before they fell asleep at ' + asleepAt + '. Check the time.',
+        'f-putdown');
+      return;
+    }
+    if (gap > SETTLE_CONFIRM){
+      askConfirm({
+        title: 'That is a long settle',
+        text: 'Put down at ' + downAt + ', asleep at ' + asleepAt + ' — ' + fmtDur(gap * 60000) + ' of settling. Is that right?',
+        confirmLabel: 'Yes, save it',
+        keepLabel: 'Go back',
+        tone: 'primary',
+        onConfirm: proceed
+      });
+      return;
+    }
+    proceed();
   }
 
   function groupByDay(items, timeOf){
@@ -1161,19 +1222,25 @@
 
   function renderSettleTrend(){
     var days = chartDays(), byKey = {}, todayKey = dateKey(new Date());
+    var total = settleView() === 'total';
     days.forEach(function(d){ d.sum = 0; d.count = 0; byKey[d.key] = d; });
     state.entries.forEach(function(e){
       var s = settleMinutes(e); var d = byKey[e.date];
       if (s === null || !d) return;
       d.sum += s; d.count++;
     });
+    el('settle-range').textContent = (total ? 'Daily total' : 'Daily average') + ', last 14 days';
     renderBars('settle-wrap', {
-      label: 'Average minutes to settle per day, last 14 days',
+      label: (total ? 'Total' : 'Average') + ' minutes to settle per day, last 14 days',
       days: days.map(function(d){
-        var avg = d.count ? d.sum / d.count : 0;
+        var value = d.count ? (total ? d.sum : d.sum / d.count) : 0;
         return { key: d.key, date: d.date,
-          segments: [{ minutes: avg, cls: 'chart-seg-night' }],
-          tip: dayLabel(d, todayKey) + ' · ' + (d.count ? Math.round(avg) + 'm to settle on average (' + plural(d.count, 'sleep') + ')' : 'No put-down times logged') };
+          segments: [{ minutes: value, cls: 'chart-seg-night' }],
+          tip: dayLabel(d, todayKey) + ' · ' + (d.count
+            ? (total
+              ? Math.round(value) + 'm settling across ' + plural(d.count, 'sleep')
+              : Math.round(value) + 'm to settle on average (' + plural(d.count, 'sleep') + ')')
+            : 'No put-down times logged') };
       }),
       niceMax: function(m){ var steps = [5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 240, 360]; for (var i = 0; i < steps.length; i++){ if (steps[i] >= m) return steps[i]; } return Math.ceil(m); },
       yLabel: function(m){ return Math.round(m) + 'm'; },
@@ -1194,6 +1261,12 @@
 
   var formMode = 'entry';
 
+  // The nudge: the hint shows only while the field is empty, and never stops
+  // the form being saved without one.
+  function renderPutDownHint(){
+    el('f-putdown-hint').hidden = !!el('f-putdown').value;
+  }
+
   function applyMode(){
     var isStart = formMode === 'start';
     var isWake = formMode === 'wake';
@@ -1203,6 +1276,7 @@
     el('chips-start').hidden = !isStart;
     el('chips-end').hidden = !isWake;
     el('chips-putdown').hidden = !(isStart || isWake);
+    renderPutDownHint();
 
     var danger = el('f-danger');
     var cancel = el('f-cancel');
@@ -1316,6 +1390,7 @@
     openStartForm(true);
   });
 
+  el('f-putdown').addEventListener('input', renderPutDownHint);
   el('add-btn').addEventListener('click', function(){ openForm(null); });
   el('f-cancel').addEventListener('click', closeForm);
   el('form-close').addEventListener('click', closeForm);
@@ -1332,9 +1407,11 @@
         settleNotes: el('f-settle').value.trim(),
         putDown: el('f-putdown').value
       };
-      showToast('Asleep from ' + fmtTime(new Date(status.since)) + ' saved');
-      closeForm();
-      await commit([{ type: 'status', status: status }]);
+      guardPutDown(status.putDown, el('f-start').value, async function(){
+        showToast('Asleep from ' + fmtTime(new Date(status.since)) + ' saved');
+        closeForm();
+        await commit([{ type: 'status', status: status }]);
+      });
       return;
     }
 
@@ -1366,10 +1443,12 @@
     };
     var ops = [{ type: 'upsert', collection: 'entries', record: entry }];
     if (formMode === 'wake') ops.push({ type: 'status', status: { asleep: false, since: null, settleNotes: '' } });
-    showToast(el('entry-id').value ? 'Sleep updated' :
-      fmtDur(entryEnd(entry) - entryStart(entry)) + ' of sleep logged');
-    closeForm();
-    await commit(ops);
+    var editing = !!el('entry-id').value;
+    guardPutDown(entry.putDown, entry.start, async function(){
+      showToast(editing ? 'Sleep updated' : fmtDur(entryEnd(entry) - entryStart(entry)) + ' of sleep logged');
+      closeForm();
+      await commit(ops);
+    });
   });
 
   el('f-danger').addEventListener('click', function(){
@@ -1875,6 +1954,22 @@
   });
   el('set-night-start').addEventListener('input', renderBedtimeBasis);
 
+  var draftSettle = 'total';
+  function renderSettleChoice(){
+    Array.prototype.forEach.call(el('set-settle-view').querySelectorAll('.unit-btn'), function(btn){
+      btn.setAttribute('aria-pressed', btn.dataset.settle === draftSettle ? 'true' : 'false');
+    });
+    el('set-settle-hint').textContent = draftSettle === 'total'
+      ? 'Each bar adds up all the settling that day, so a day with three hard naps stands out.'
+      : 'Each bar is the average settle for one sleep that day, so days are comparable however many sleeps they had.';
+  }
+  el('set-settle-view').addEventListener('click', function(ev){
+    var btn = ev.target.closest('.unit-btn');
+    if (!btn) return;
+    draftSettle = btn.dataset.settle;
+    renderSettleChoice();
+  });
+
   function openSettings(){
     if (readOnly) return;
     var s = state.settings || {};
@@ -1883,6 +1978,8 @@
     el('set-night-end').value = s.nightEnd || '06:00';
     draftBasis = bedtimeBasis();
     renderBedtimeBasis();
+    draftSettle = settleView();
+    renderSettleChoice();
     hideError('set-error');
     openOverlay('settings-overlay');
     el('set-dob').focus();
@@ -1966,7 +2063,9 @@
     if (dob && dob > dateKey(new Date())){ showError('set-error', 'The date of birth can’t be in the future.', 'set-dob'); return; }
     if (!ns || !ne){ showError('set-error', 'Enter both night times.', ns ? 'set-night-end' : 'set-night-start'); return; }
     closeSettings();
-    await commit([{ type: 'settings', settings: Object.assign({}, state.settings, { dob: dob, nightStart: ns, nightEnd: ne, bedtimeBasis: draftBasis }) }]);
+    await commit([{ type: 'settings', settings: Object.assign({}, state.settings, {
+      dob: dob, nightStart: ns, nightEnd: ne, bedtimeBasis: draftBasis, settleView: draftSettle
+    }) }]);
   });
 
   function renderHome(){
@@ -2053,6 +2152,7 @@
         var startVal = el('f-start').value;
         var base = startVal ? timeToDateNear(startVal, new Date()) : new Date();
         el('f-putdown').value = timeValue(new Date(base.getTime() - before * 60000));
+        renderPutDownHint();
       } else if (chip.hasAttribute('data-food')){
         addDraftFood(chip.getAttribute('data-food'));
       }
