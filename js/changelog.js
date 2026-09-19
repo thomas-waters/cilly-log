@@ -17,12 +17,15 @@
  *   MINOR  something is added and everything already there still works.
  *   PATCH  a fix, or a change nobody using the app can see.
  *
- * 2.0.0 is where the emailed sign-in link went: a way into the app that
- * 1.0.0 shipped with stopped existing.
+ * There has been no major yet. The nearest thing was 1.3.1, where the emailed
+ * sign-in link was hidden: it had stopped working — Supabase rate-limited it
+ * — so taking it away fixed a dead end rather than removing something that
+ * worked. Judge it that way next time too: a way out that was already broken
+ * is a fix, a working one being removed is a major.
  */
 window.CILLY_CHANGELOG = [
   {
-    version: '2.5.2',
+    version: '1.8.2',
     date: '2026-09-19',
     title: 'Version numbers now mean something',
     notes: [
@@ -31,7 +34,7 @@ window.CILLY_CHANGELOG = [
     ]
   },
   {
-    version: '2.5.1',
+    version: '1.8.1',
     date: '2026-09-19',
     title: 'Staying where you were',
     notes: [
@@ -39,7 +42,7 @@ window.CILLY_CHANGELOG = [
     ]
   },
   {
-    version: '2.5.0',
+    version: '1.8.0',
     date: '2026-09-19',
     title: 'Settling times',
     notes: [
@@ -51,7 +54,7 @@ window.CILLY_CHANGELOG = [
     ]
   },
   {
-    version: '2.4.0',
+    version: '1.7.0',
     date: '2026-09-18',
     title: 'This change log',
     notes: [
@@ -59,7 +62,7 @@ window.CILLY_CHANGELOG = [
     ]
   },
   {
-    version: '2.3.0',
+    version: '1.6.0',
     date: '2026-09-18',
     title: 'What the age comparison rests on',
     notes: [
@@ -68,7 +71,7 @@ window.CILLY_CHANGELOG = [
     ]
   },
   {
-    version: '2.2.0',
+    version: '1.5.0',
     date: '2026-09-18',
     title: 'One way to log, and a check before deleting',
     notes: [
@@ -79,7 +82,7 @@ window.CILLY_CHANGELOG = [
     ]
   },
   {
-    version: '2.1.0',
+    version: '1.4.0',
     date: '2026-09-18',
     title: 'The sleep guide learned about night',
     notes: [
@@ -91,7 +94,7 @@ window.CILLY_CHANGELOG = [
     ]
   },
   {
-    version: '2.0.1',
+    version: '1.3.2',
     date: '2026-09-18',
     title: 'Bedtime, not a nap',
     notes: [
@@ -99,7 +102,7 @@ window.CILLY_CHANGELOG = [
     ]
   },
   {
-    version: '2.0.0',
+    version: '1.3.1',
     date: '2026-09-18',
     title: 'Google sign-in only',
     notes: [

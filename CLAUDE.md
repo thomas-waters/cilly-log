@@ -45,8 +45,10 @@ It holds real family records: treat the live data with care.
   is what a parent can do in the app plus the shape of the stored records:
   MAJOR when something they could do is taken away or changes meaning, or old
   builds can no longer read the data; MINOR when something is added and the
-  rest still works; PATCH for fixes and for changes nobody can see. The header
-  of `js/changelog.js` spells this out — keep the two in step.
+  rest still works; PATCH for fixes and for changes nobody can see. Taking
+  away something that was already broken is a fix, not a major — that is why
+  hiding the dead email sign-in link is 1.3.1. The header of
+  `js/changelog.js` spells this out — keep the two in step.
 - `staging` (when present) deploys to `…/cilly-log/staging/` and points at a
   separate Supabase project with throwaway data. Try features there first.
 - Repo: `thomas-waters/cilly-log` (public). Never commit anything under
