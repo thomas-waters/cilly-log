@@ -301,6 +301,9 @@
       bits.push('<span class="meta-warn">Put down at ' + fmtClock(minutesOf(e.putDown)) +
         (gap >= SETTLE_INVERTED ? ', after the asleep time' : ', ' + fmtDur(gap * 60000) + ' before') + '</span>');
     }
+    // Saying so is the difference between "nothing to show" and "nobody wrote
+    // it down". The entry is still perfectly valid without one.
+    else bits.push('<span class="meta-quiet">No put-down</span>');
     var who = personChip(e);
     if (who) bits.push(who);
     return bits.length ? '<span class="entry-meta">' + bits.join('') + '</span>' : '';
@@ -1258,6 +1261,12 @@
 
   var formMode = 'entry';
 
+  // The nudge: the hint shows only while the field is empty, and never stops
+  // the form being saved without one.
+  function renderPutDownHint(){
+    el('f-putdown-hint').hidden = !!el('f-putdown').value;
+  }
+
   function applyMode(){
     var isStart = formMode === 'start';
     var isWake = formMode === 'wake';
@@ -1267,6 +1276,7 @@
     el('chips-start').hidden = !isStart;
     el('chips-end').hidden = !isWake;
     el('chips-putdown').hidden = !(isStart || isWake);
+    renderPutDownHint();
 
     var danger = el('f-danger');
     var cancel = el('f-cancel');
@@ -1380,6 +1390,7 @@
     openStartForm(true);
   });
 
+  el('f-putdown').addEventListener('input', renderPutDownHint);
   el('add-btn').addEventListener('click', function(){ openForm(null); });
   el('f-cancel').addEventListener('click', closeForm);
   el('form-close').addEventListener('click', closeForm);
@@ -2141,6 +2152,7 @@
         var startVal = el('f-start').value;
         var base = startVal ? timeToDateNear(startVal, new Date()) : new Date();
         el('f-putdown').value = timeValue(new Date(base.getTime() - before * 60000));
+        renderPutDownHint();
       } else if (chip.hasAttribute('data-food')){
         addDraftFood(chip.getAttribute('data-food'));
       }
