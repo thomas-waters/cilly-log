@@ -775,7 +775,41 @@
     renderSummary();
   });
 
+  // Insights is three jobs behind three tabs: how the last stretch went, which
+  // days were good, and getting it out to somebody else. Each tab holds only
+  // the control that governs it - the period toggle used to sit above a month
+  // grid and an export it had nothing to do with. Everything is still rendered
+  // whatever is on screen, so switching tabs never waits and printing can show
+  // the lot.
+  var SUMMARY_TABS = ['overview', 'calendar', 'share'];
+  var TAB_KEY = 'cilly.tab';
+  var summaryTab = (function(){
+    var saved = ssGet(TAB_KEY);
+    return SUMMARY_TABS.indexOf(saved) >= 0 ? saved : 'overview';
+  })();
+  function renderSummaryTabs(){
+    SUMMARY_TABS.forEach(function(name){
+      var on = name === summaryTab;
+      el('tab-' + name).setAttribute('aria-selected', on ? 'true' : 'false');
+      el('panel-' + name).hidden = !on;
+    });
+    el('summary-tagline').textContent =
+      summaryTab === 'calendar' ? 'Every day of the month, at a glance.' :
+      summaryTab === 'share' ? 'For the GP, the nurse or the sleep consultant.' :
+      'The last ' + (summaryDays === 7 ? '7 days' : (summaryDays / 7) + ' weeks') + ', and how they compare.';
+  }
+  el('summary-tabs').addEventListener('click', function(ev){
+    var btn = ev.target.closest('.tab');
+    if (!btn || btn.dataset.tab === summaryTab) return;
+    summaryTab = btn.dataset.tab;
+    ssSet(TAB_KEY, summaryTab);
+    renderSummaryTabs();
+    hideChartTooltip();
+    window.scrollTo({ top: 0 });
+  });
+
   function renderSummary(){
+    renderSummaryTabs();
     renderPeriodChoice();
     var thisWeek = statsFor(dayKeysEndingToday(0, summaryDays));
     var lastWeek = statsFor(dayKeysEndingToday(1, summaryDays));
@@ -793,7 +827,6 @@
     renderMonth();
     el('print-heading').textContent = 'Cilly Log — ' + summaryDays + ' days to ' +
       new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    el('summary-tagline').textContent = 'The last ' + (summaryDays === 7 ? '7 days' : (summaryDays / 7) + ' weeks') + ', and how they compare.';
 
     var sub = thisWeek.sleepPerDayMs
       ? fmtDur(thisWeek.sleepPerDayMs) + ' sleep a day over ' + periodName(summaryDays)

@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#5B54D6">
   <title>Cilly Log</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
-  <link rel="stylesheet" href="css/app.css?v=20260919-2359">
+  <link rel="stylesheet" href="css/app.css?v=20260920-0006">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -126,7 +126,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>
         </span>
         <span class="nav-text">
-          <span class="nav-title">Summary</span>
+          <span class="nav-title">Insights</span>
           <span class="nav-sub" id="home-summary-sub">This week at a glance, and export</span>
         </span>
         <span class="nav-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M9 5l7 7-7 7"/></svg></span>
@@ -708,7 +708,7 @@
   <!-- ================= SLEEP CONSULTANT LOG ================= -->
   <section class="view view-report" aria-label="Sleep consultant log">
     <header class="page-head no-print">
-      <button class="head-btn" type="button" data-nav="summary" aria-label="Back to summary">
+      <button class="head-btn" type="button" data-nav="summary" aria-label="Back to Insights">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M15 5l-7 7 7 7"/></svg>
       </button>
       <div class="head-text">
@@ -746,7 +746,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>
       </span>
       <div class="head-text">
-        <h1>Summary</h1>
+        <h1>Insights</h1>
         <p class="tagline" id="summary-tagline">The last 7 days, and how they compare.</p>
       </div>
       <button class="head-btn" type="button" data-refresh aria-label="Refresh">
@@ -756,6 +756,16 @@
 
     <p class="print-only" id="print-heading"></p>
 
+    <!-- Three jobs, three tabs, and each one carries only the control that
+         governs it. On one page the period toggle at the top looked as though
+         it ran the month grid and the export below it, which it never did. -->
+    <div class="tab-bar no-print" id="summary-tabs" role="tablist" aria-label="Insights">
+      <button type="button" class="tab" role="tab" data-tab="overview" id="tab-overview" aria-controls="panel-overview" aria-selected="true">Overview</button>
+      <button type="button" class="tab" role="tab" data-tab="calendar" id="tab-calendar" aria-controls="panel-calendar" aria-selected="false">Calendar</button>
+      <button type="button" class="tab" role="tab" data-tab="share" id="tab-share" aria-controls="panel-share" aria-selected="false">Share</button>
+    </div>
+
+    <div class="tab-panel" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview">
     <div class="field no-print">
       <span class="field-label" id="summary-period-label">Period</span>
       <div class="unit-toggle basis-toggle" id="summary-period" role="group" aria-labelledby="summary-period-label">
@@ -763,6 +773,7 @@
         <button type="button" class="unit-btn" data-days="28" aria-pressed="false">4 weeks</button>
         <button type="button" class="unit-btn" data-days="84" aria-pressed="false">12 weeks</button>
       </div>
+      <p class="form-hint">Sets the figures, the age comparison and the day-by-day table below.</p>
     </div>
 
     <section class="summary-grid" id="summary-grid" aria-label="This period compared with the one before"></section>
@@ -779,6 +790,19 @@
       <p class="form-hint" id="norms-note"></p>
     </section>
 
+    <section class="panel" aria-label="Day by day">
+      <div class="panel-head">
+        <h2 id="day-table-heading">Day by day</h2>
+        <span class="chart-range" id="day-table-range">Last 7 days</span>
+      </div>
+      <div class="table-wrap">
+        <table class="day-table" id="day-table"></table>
+      </div>
+      <p class="form-hint" id="day-table-note"></p>
+    </section>
+    </div>
+
+    <div class="tab-panel" id="panel-calendar" role="tabpanel" aria-labelledby="tab-calendar" hidden>
     <section class="panel" id="month-panel" aria-label="Month at a glance">
       <div class="panel-head month-head">
         <h2>Month at a glance</h2>
@@ -816,20 +840,11 @@
       </div>
       <p class="form-hint" id="month-note"></p>
     </section>
+    </div>
 
-    <section class="panel" aria-label="Day by day">
-      <div class="panel-head">
-        <h2 id="day-table-heading">Day by day</h2>
-        <span class="chart-range" id="day-table-range">Last 7 days</span>
-      </div>
-      <div class="table-wrap">
-        <table class="day-table" id="day-table"></table>
-      </div>
-      <p class="form-hint" id="day-table-note"></p>
-    </section>
-
+    <div class="tab-panel" id="panel-share" role="tabpanel" aria-labelledby="tab-share" hidden>
     <section class="panel no-print" aria-label="Export">
-      <h2>Export</h2>
+      <h2>Send it on</h2>
       <div class="field">
         <label for="export-range">Period</label>
         <select id="export-range">
@@ -840,9 +855,9 @@
           <option value="0">Everything</option>
         </select>
       </div>
-      <p class="form-hint">The spreadsheet has one row per event. The printout is this page: the weekly figures, the month grid and the day-by-day table.</p>
+      <p class="form-hint">The spreadsheet has one row per event. The printout is everything on the other two tabs: the figures, the age comparison, the month grid and the day-by-day table.</p>
       <div class="form-actions">
-        <button type="button" class="btn ghost" id="print-btn">Print summary</button>
+        <button type="button" class="btn ghost" id="print-btn">Print it all</button>
         <button type="button" class="btn primary" id="csv-btn">Download spreadsheet</button>
       </div>
       <p class="form-hint">A sleep consultant usually wants it written out rather than as a spreadsheet: a line per event, in order, saying what happened and how he was.</p>
@@ -850,6 +865,7 @@
         <button type="button" class="btn ghost" id="report-btn">Sleep consultant log</button>
       </div>
     </section>
+    </div>
 
     <!-- Opened by tapping a day in the month grid. Read-only: editing happens
          in the log, which the button at the bottom goes to. -->
@@ -910,11 +926,11 @@
 
 <div class="toast" id="toast" hidden></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/config.js?v=20260919-2359"></script>
-<script src="js/store.js?v=20260919-2359"></script>
-<script src="js/docx.js?v=20260919-2359"></script>
-<script src="js/changelog.js?v=20260919-2359"></script>
-<script src="js/sleep-model.js?v=20260919-2359"></script>
-<script src="js/app.js?v=20260919-2359"></script>
+<script src="js/config.js?v=20260920-0006"></script>
+<script src="js/store.js?v=20260920-0006"></script>
+<script src="js/docx.js?v=20260920-0006"></script>
+<script src="js/changelog.js?v=20260920-0006"></script>
+<script src="js/sleep-model.js?v=20260920-0006"></script>
+<script src="js/app.js?v=20260920-0006"></script>
 </body>
 </html>

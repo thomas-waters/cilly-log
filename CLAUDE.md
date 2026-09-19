@@ -63,7 +63,16 @@ It holds real family records: treat the live data with care.
   it half an hour either side of the night start, `age` uses the band's own
   range. Any new clock time the guide shows should come from one of those
   two, not from a constant.
-- Summary's **Month at a glance** answers one question — did he get enough? —
+- **Insights** (still `view-summary` and the `summary` view id in the code, so
+  saved views and the print rules keep working) is three tabs: Overview, the
+  figures and the age comparison for the chosen period; Calendar, the month
+  grid; Share, the exports. Each tab holds only the control that governs it —
+  a filter belongs beside what it filters, never above three blocks it does
+  not touch. Everything renders whatever tab is open, so switching is instant
+  and printing can unhide them all. Anything new goes in the tab whose job it
+  shares, or it needs a tab of its own.
+- The Calendar tab's **Month at a glance** answers one question — did he get
+  enough? —
   so only a shortfall is coloured: at or above the range is green, within an
   hour below is amber, further below is red (`monthDay` in `js/app.js`). The
   range comes from `js/sleep-model.js` for his age **on that day**, so older
@@ -113,9 +122,11 @@ It holds real family records: treat the live data with care.
 
 ## Exports
 
-There are three, all on the Summary page. The spreadsheet is one row per
-event for a chosen period. Printing the Summary gives the figures and the
-day-by-day table. The **Consultant log** (`view-report`) writes the days out
+There are three, all on the Share tab of Insights. The spreadsheet is one row
+per event for a chosen period. Printing gives the whole of Insights — the
+figures, the age comparison, the month grid and the day-by-day table —
+whichever tab is open, because `@media print` unhides the other tab panels.
+The **Consultant log** (`view-report`) writes the days out
 instead: a two-column table, a line per event in order, in the shape a sleep
 consultant asks for — what happened, what you did, how he was. Keep it to two
 columns and one event per row: that is the shape the consultant keeps the log
@@ -123,8 +134,8 @@ in, and the page and the Word file are both built from `reportRows` so they
 cannot drift apart. The settle and wake notes are what carry "what you did"
 and "how he was", so a sleep logged without them comes out as bare times and
 the page says how many of those there are. It can be printed, copied as HTML,
-or saved as a .docx. Printing prints whichever view is open, not always the
-Summary.
+or saved as a .docx. Printing prints whichever view is open, not always
+Insights.
 
 ## Checks
 

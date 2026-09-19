@@ -722,6 +722,23 @@
   .empty p{ margin:0; }
   .empty-icon{ font-size:1.6rem; display:block; margin-bottom:8px; }
 
+  /* Tabs, not another segmented control. This is navigation between three
+     pages; the segmented toggles inside them are filters, and the two should
+     not look alike. */
+  .tab-bar{ display:flex; gap:2px; border-bottom:1px solid var(--border); }
+  .tab{
+    flex:1;
+    font-family:inherit; font-size:0.85rem; font-weight:600;
+    padding:9px 6px;
+    border:none; background:none; color:var(--ink-soft);
+    border-bottom:2px solid transparent; margin-bottom:-1px;
+    cursor:pointer;
+  }
+  .tab[aria-selected="true"]{ color:var(--accent); border-bottom-color:var(--accent); }
+  .tab:focus-visible{ outline:2px solid var(--accent); outline-offset:-3px; border-radius:8px; }
+  /* Same rhythm between panels as when they were loose in the view. */
+  .tab-panel{ display:flex; flex-direction:column; gap:22px; }
+
   .summary-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   .summary-tile{
     background:var(--surface);
@@ -955,6 +972,10 @@
     #app[data-view="report"] .view-report{ display:flex !important; }
     #auth-panel{ display:none !important; }
     .print-only{ display:block; font-size:0.85rem; color:var(--ink-soft); margin:0; }
+    /* Paper has no tabs. Whichever one is open, the printout is the whole of
+       Insights, as it was when this was a single page. */
+    .tab-bar{ display:none !important; }
+    .tab-panel[hidden]{ display:flex !important; }
     .panel, .summary-tile{ box-shadow:none; break-inside:avoid; }
     .summary-grid{ grid-template-columns:1fr 1fr; }
     .day-table{ font-size:0.78rem; }

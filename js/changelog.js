@@ -27,8 +27,11 @@ window.CILLY_CHANGELOG = [
   {
     version: '1.15.0',
     date: '2026-09-19',
-    title: 'Light or dark, and settings of your own',
+    title: 'Settings of your own, and Insights',
     notes: [
+      'Summary is now Insights, in three tabs. Overview has the figures and how they compare with his age, Calendar has the month grid, and Share has the spreadsheet, the printout and the consultant log.',
+      'Each tab carries only the control that belongs to it. The 1 week / 4 weeks / 12 weeks choice used to sit above a month grid and an export it never had anything to do with; it is on Overview now, with a line saying what it changes.',
+      'Printing still prints all of it, whichever tab you are on.',
       'Settings is now in two parts: Shared, which both phones see, and Just for you, which is kept on your account and changes nothing on the other phone.',
       'Night mode and the time-to-settle chart have moved into Just for you, so one of you can have night mode without the other. Both keep whatever was set for them until you change them.',
       'Anything under Just for you takes effect as you tap it; Save is for the shared settings.',
