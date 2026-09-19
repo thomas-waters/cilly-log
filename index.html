@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#5B54D6">
   <title>Cilly Log</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
-  <link rel="stylesheet" href="css/app.css?v=20260919-1301">
+  <link rel="stylesheet" href="css/app.css?v=20260919-1406">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -99,6 +99,16 @@
         <span class="nav-text">
           <span class="nav-title">Solids</span>
           <span class="nav-sub" id="home-solids-sub">No solids logged today</span>
+        </span>
+        <span class="nav-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M9 5l7 7-7 7"/></svg></span>
+      </button>
+      <button class="nav-tile feature-medicine" type="button" data-nav="meds">
+        <span class="nav-icon" data-type="meds">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="2.5" y="8.5" width="19" height="7" rx="3.5"/><path d="M12 8.5v7"/></svg>
+        </span>
+        <span class="nav-text">
+          <span class="nav-title">Medicine</span>
+          <span class="nav-sub" id="home-meds-sub">Nothing given today</span>
         </span>
         <span class="nav-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M9 5l7 7-7 7"/></svg></span>
       </button>
@@ -233,6 +243,8 @@
       <p class="wake-foot" id="wake-foot"></p>
       <p class="wake-hint" id="wake-hint" hidden></p>
     </section>
+
+    <button class="btn ghost night-toggle" id="night-toggle" type="button" hidden>Show the rest</button>
 
     <section class="stats-row" aria-label="Sleep totals">
       <div class="stat-tile">
@@ -518,10 +530,135 @@
     </section>
     </div>
 
+    <section class="panel" id="food-panel" hidden>
+      <div class="panel-head">
+        <h2>Foods so far</h2>
+        <span class="chart-range" id="food-count"></span>
+      </div>
+      <input type="search" id="food-search" autocomplete="off" placeholder="Search foods, e.g. egg">
+      <div class="food-list" id="food-list"></div>
+      <p class="form-hint" id="food-note"></p>
+    </section>
+
     <div class="log-toolbar">
       <h2>Solids log</h2>
     </div>
     <section class="log" id="solids-log"></section>
+  </section>
+
+  <!-- ================= MEDICINE ================= -->
+  <section class="view view-meds" aria-label="Medicine">
+    <header class="page-head">
+      <button class="head-btn" type="button" data-nav="home" aria-label="Back to home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <span class="nav-icon head-icon" data-type="meds">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="2.5" y="8.5" width="19" height="7" rx="3.5"/><path d="M12 8.5v7"/></svg>
+      </span>
+      <div class="head-text">
+        <h1>Medicine</h1>
+        <p class="tagline">Doses, and when the next one is due.</p>
+      </div>
+      <button class="head-btn" type="button" data-refresh aria-label="Refresh">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>
+      </button>
+    </header>
+
+    <section class="status-card action-card writer-only">
+      <button class="status-btn" id="med-add-btn" type="button">
+        <span class="status-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="2.5" y="8.5" width="19" height="7" rx="3.5"/><path d="M12 8.5v7"/></svg>
+        </span>
+        <span class="status-text">
+          <span class="status-label">Log a dose</span>
+          <span class="status-sub" id="med-add-sub">Tap to record what was given</span>
+        </span>
+        <span class="nav-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M9 5l7 7-7 7"/></svg></span>
+      </button>
+    </section>
+
+    <section class="wake-card" id="med-due-card" hidden>
+      <div class="wake-row">
+        <div class="wake-block">
+          <span class="wake-label" id="med-due-label">Last dose</span>
+          <span class="wake-value" id="med-due-last">&mdash;</span>
+          <span class="wake-sub" id="med-due-ago"></span>
+        </div>
+        <div class="wake-block">
+          <span class="wake-label">Next dose from</span>
+          <span class="wake-value" id="med-due-next">&mdash;</span>
+          <span class="wake-state" id="med-due-state"></span>
+        </div>
+      </div>
+      <p class="wake-foot" id="med-due-foot"></p>
+    </section>
+
+    <div class="overlay writer-only" id="med-overlay" hidden>
+    <section class="panel overlay-panel" role="dialog" aria-modal="true" aria-labelledby="med-title">
+      <div class="overlay-head">
+        <h2 id="med-title">Log a dose</h2>
+        <button type="button" class="head-btn" id="med-close" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <form id="med-form">
+        <input type="hidden" id="md-id" value="">
+        <div class="row">
+          <div class="field">
+            <label for="md-date">Date</label>
+            <input type="date" id="md-date">
+          </div>
+          <div class="field">
+            <label for="md-time">Time</label>
+            <input type="time" id="md-time">
+          </div>
+        </div>
+        <div class="chips" data-target="md-time">
+          <button type="button" class="chip" data-minutes="0">Now</button>
+          <button type="button" class="chip" data-minutes="5">5m ago</button>
+          <button type="button" class="chip" data-minutes="10">10m ago</button>
+          <button type="button" class="chip" data-minutes="20">20m ago</button>
+          <button type="button" class="chip" data-minutes="30">30m ago</button>
+        </div>
+        <div class="field">
+          <label for="md-name">Medicine</label>
+          <input type="text" id="md-name" list="med-suggestions" autocomplete="off" placeholder="Calpol, Nurofen, vitamin drops...">
+          <datalist id="med-suggestions"></datalist>
+          <div class="chips" id="md-recent"></div>
+        </div>
+        <div class="field">
+          <label for="md-dose">Dose</label>
+          <input type="text" id="md-dose" autocomplete="off" placeholder="2.5 ml">
+          <div class="chips" id="md-dose-chips"></div>
+        </div>
+        <div class="field">
+          <span class="field-label" id="md-gap-label">Next dose after</span>
+          <div class="unit-toggle basis-toggle" id="md-gap" role="group" aria-labelledby="md-gap-label">
+            <button type="button" class="unit-btn" data-gap="240">4h</button>
+            <button type="button" class="unit-btn" data-gap="360">6h</button>
+            <button type="button" class="unit-btn" data-gap="480">8h</button>
+            <button type="button" class="unit-btn" data-gap="0">None</button>
+          </div>
+          <p class="form-hint" id="md-gap-hint"></p>
+        </div>
+        <div class="field">
+          <label for="md-notes">Notes</label>
+          <textarea id="md-notes" rows="2" placeholder="Temperature 38.2, took it fine, brought some back up..."></textarea>
+        </div>
+        <p class="form-error" id="md-error" hidden></p>
+        <div class="form-actions">
+          <button type="button" class="btn danger" id="md-delete" hidden>Delete</button>
+          <button type="button" class="btn ghost" id="md-cancel">Cancel</button>
+          <button type="submit" class="btn primary" id="md-submit">Add dose</button>
+        </div>
+      </form>
+    </section>
+    </div>
+
+    <div class="log-toolbar">
+      <h2>Medicine log</h2>
+    </div>
+    <section class="log" id="meds-log"></section>
   </section>
 
   <!-- ================= SUMMARY ================= -->
@@ -535,7 +672,7 @@
       </span>
       <div class="head-text">
         <h1>Summary</h1>
-        <p class="tagline">The last 7 days, and how they compare.</p>
+        <p class="tagline" id="summary-tagline">The last 7 days, and how they compare.</p>
       </div>
       <button class="head-btn" type="button" data-refresh aria-label="Refresh">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>
@@ -544,7 +681,16 @@
 
     <p class="print-only" id="print-heading"></p>
 
-    <section class="summary-grid" id="summary-grid" aria-label="This week compared with last week"></section>
+    <div class="field no-print">
+      <span class="field-label" id="summary-period-label">Period</span>
+      <div class="unit-toggle basis-toggle" id="summary-period" role="group" aria-labelledby="summary-period-label">
+        <button type="button" class="unit-btn" data-days="7" aria-pressed="true">1 week</button>
+        <button type="button" class="unit-btn" data-days="28" aria-pressed="false">4 weeks</button>
+        <button type="button" class="unit-btn" data-days="84" aria-pressed="false">12 weeks</button>
+      </div>
+    </div>
+
+    <section class="summary-grid" id="summary-grid" aria-label="This period compared with the one before"></section>
 
     <section class="panel" id="norms-panel" aria-label="How this compares with his age" hidden>
       <div class="panel-head">
@@ -560,8 +706,8 @@
 
     <section class="panel" aria-label="Day by day">
       <div class="panel-head">
-        <h2>Day by day</h2>
-        <span class="chart-range">Last 7 days</span>
+        <h2 id="day-table-heading">Day by day</h2>
+        <span class="chart-range" id="day-table-range">Last 7 days</span>
       </div>
       <div class="table-wrap">
         <table class="day-table" id="day-table"></table>
@@ -625,10 +771,10 @@
 
 <div class="toast" id="toast" hidden></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/config.js?v=20260919-1301"></script>
-<script src="js/store.js?v=20260919-1301"></script>
-<script src="js/changelog.js?v=20260919-1301"></script>
-<script src="js/sleep-model.js?v=20260919-1301"></script>
-<script src="js/app.js?v=20260919-1301"></script>
+<script src="js/config.js?v=20260919-1406"></script>
+<script src="js/store.js?v=20260919-1406"></script>
+<script src="js/changelog.js?v=20260919-1406"></script>
+<script src="js/sleep-model.js?v=20260919-1406"></script>
+<script src="js/app.js?v=20260919-1406"></script>
 </body>
 </html>

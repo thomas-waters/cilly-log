@@ -39,6 +39,18 @@ create table if not exists public.solids (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.meds (
+  id         text primary key,
+  date       date not null,
+  time       text not null,
+  name       text not null default '',
+  dose       text not null default '',
+  gap_min    integer,         -- hours between doses, in minutes; null if not set
+  notes      text not null default '',
+  created_by text,
+  updated_at timestamptz not null default now()
+);
+
 -- Single-row settings: key = 'status' (current sleep) or 'settings' (DOB, night hours).
 create table if not exists public.app_state (
   key        text primary key,
@@ -60,6 +72,8 @@ drop trigger if exists feeds_touch on public.feeds;
 create trigger feeds_touch before update on public.feeds for each row execute function public.touch_updated_at();
 drop trigger if exists solids_touch on public.solids;
 create trigger solids_touch before update on public.solids for each row execute function public.touch_updated_at();
+drop trigger if exists meds_touch on public.meds;
+create trigger meds_touch before update on public.meds for each row execute function public.touch_updated_at();
 drop trigger if exists app_state_touch on public.app_state;
 create trigger app_state_touch before update on public.app_state for each row execute function public.touch_updated_at();
 
@@ -76,6 +90,7 @@ alter table public.allowed_users enable row level security;
 alter table public.sleeps        enable row level security;
 alter table public.feeds         enable row level security;
 alter table public.solids        enable row level security;
+alter table public.meds          enable row level security;
 alter table public.app_state     enable row level security;
 
 drop policy if exists "family can read" on public.allowed_users;
@@ -94,6 +109,10 @@ drop policy if exists "family only" on public.solids;
 create policy "family only" on public.solids
   for all to authenticated using (public.is_family()) with check (public.is_family());
 
+drop policy if exists "family only" on public.meds;
+create policy "family only" on public.meds
+  for all to authenticated using (public.is_family()) with check (public.is_family());
+
 drop policy if exists "family only" on public.app_state;
 create policy "family only" on public.app_state
   for all to authenticated using (public.is_family()) with check (public.is_family());
@@ -102,7 +121,7 @@ create policy "family only" on public.app_state
 do $$
 declare t text;
 begin
-  foreach t in array array['sleeps', 'feeds', 'solids', 'app_state'] loop
+  foreach t in array array['sleeps', 'feeds', 'solids', 'meds', 'app_state'] loop
     if not exists (
       select 1 from pg_publication_tables
       where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t

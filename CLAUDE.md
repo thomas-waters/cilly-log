@@ -14,6 +14,13 @@ It holds real family records: treat the live data with care.
   `allowed_users` can read or write. Sign-in is Google only; the emailed
   magic link is disabled in Supabase and hidden behind `emailSignIn` in
   `js/config.js`.
+- `features` in `js/config.js` is per environment: `medicine` needs its table
+  (`supabase/migrations/003_meds.sql`), so it stays off on an environment
+  until that has been run there; `nightMode` needs nothing. Off means the
+  tiles, pages and entries are not there at all — `applyFeatureFlags` hides
+  them and `viewAllowed` keeps the page unreachable. Anything new that could
+  be unwanted should go behind a flag the same way rather than being
+  hard-wired in.
 - State changes are expressed as ops (`upsert`, `delete`, `status`,
   `settings`) applied to an in-memory state and persisted through the store;
   see `applyOps` and `commit` in `js/app.js`. Keep new features on that model.

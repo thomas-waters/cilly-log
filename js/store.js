@@ -23,6 +23,7 @@
       entries: [],
       feeds: [],
       solids: [],
+      meds: [],
       // email -> display name ("Dad", "Mum"), loaded from the database so no
       // personal addresses live in this repo.
       people: {},
@@ -38,6 +39,7 @@
     s.entries = Array.isArray(s.entries) ? s.entries : [];
     s.feeds = Array.isArray(s.feeds) ? s.feeds : [];
     s.solids = Array.isArray(s.solids) ? s.solids : [];
+    s.meds = Array.isArray(s.meds) ? s.meds : [];
     s.people = s.people && typeof s.people === 'object' ? s.people : {};
     s.me = typeof s.me === 'string' ? s.me : '';
     return s;
@@ -116,9 +118,19 @@
       return { id: s.id, date: s.date, time: s.time, foods: s.foods || [],
         notes: s.notes || '', created_by: s.createdBy || null };
     }
+    function rowToMed(r){
+      return { id: r.id, date: r.date, time: r.time, name: r.name || '', dose: r.dose || '',
+        gapMin: r.gap_min == null ? null : Number(r.gap_min),
+        notes: r.notes || '', createdBy: r.created_by || '' };
+    }
+    function medToRow(m){
+      return { id: m.id, date: m.date, time: m.time, name: m.name || '', dose: m.dose || '',
+        gap_min: m.gapMin == null ? null : m.gapMin,
+        notes: m.notes || '', created_by: m.createdBy || null };
+    }
 
-    var TABLE = { entries: 'sleeps', feeds: 'feeds', solids: 'solids' };
-    var TO_ROW = { entries: sleepToRow, feeds: feedToRow, solids: solidToRow };
+    var TABLE = { entries: 'sleeps', feeds: 'feeds', solids: 'solids', meds: 'meds' };
+    var TO_ROW = { entries: sleepToRow, feeds: feedToRow, solids: solidToRow, meds: medToRow };
 
     function isMissingColumn(error, column){
       if (!error) return false;
@@ -146,6 +158,10 @@
       state.entries = results[0].data.map(rowToSleep);
       state.feeds = results[1].data.map(rowToFeed);
       state.solids = results[2].data.map(rowToSolid);
+      // Medicine arrived after the other tables. A database that has not had
+      // the migration run simply has no doses, rather than failing to load.
+      var meds = await client.from('meds').select('*');
+      state.meds = meds.error ? [] : meds.data.map(rowToMed);
       results[3].data.forEach(function(row){
         if (row.key === 'status') state.status = Object.assign(state.status, row.value || {});
         if (row.key === 'settings') state.settings = Object.assign(state.settings, row.value || {});
@@ -200,7 +216,7 @@
     function subscribe(){
       if (channel) return;
       channel = client.channel('cilly-log-changes');
-      ['sleeps', 'feeds', 'solids', 'app_state'].forEach(function(table){
+      ['sleeps', 'feeds', 'solids', 'meds', 'app_state'].forEach(function(table){
         channel.on('postgres_changes', { event: '*', schema: 'public', table: table }, scheduleReload);
       });
       channel.subscribe();
