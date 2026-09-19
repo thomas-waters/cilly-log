@@ -25,6 +25,14 @@
  */
 window.CILLY_CHANGELOG = [
   {
+    version: '1.12.1',
+    date: '2026-09-19',
+    title: 'Blank screen at night fixed',
+    notes: [
+      'Opening a sleep during night hours showed a dark, empty screen instead of the form. Tapping asleep did the same. The rule that strips the Sleep page back at night was also hiding the form itself.'
+    ]
+  },
+  {
     version: '1.12.0',
     date: '2026-09-19',
     title: 'The consultant log as a Word file',

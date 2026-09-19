@@ -113,11 +113,14 @@
     background:var(--bg);
   }
   /* In simple mode only what a half-asleep parent needs is on screen. The
-     button below the card brings the rest back. */
-  body[data-night-simple="true"] .view-sleep .panel,
-  body[data-night-simple="true"] .view-sleep .stats-row,
-  body[data-night-simple="true"] .view-sleep .log-toolbar,
-  body[data-night-simple="true"] .view-sleep .log{ display:none; }
+     button below the card brings the rest back.
+     Direct children only: the forms live in an overlay inside this same view
+     and are also .panel, so a descendant selector hid the form itself and left
+     a blank screen behind the backdrop. */
+  body[data-night-simple="true"] .view-sleep > .panel,
+  body[data-night-simple="true"] .view-sleep > .stats-row,
+  body[data-night-simple="true"] .view-sleep > .log-toolbar,
+  body[data-night-simple="true"] .view-sleep > .log{ display:none; }
   .night-toggle{ align-self:center; }
 
   *{box-sizing:border-box;}
