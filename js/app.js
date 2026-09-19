@@ -18,6 +18,9 @@
     Array.prototype.forEach.call(document.querySelectorAll('.feature-medicine'), function(node){
       node.hidden = !FEATURES.medicine;
     });
+    Array.prototype.forEach.call(document.querySelectorAll('.feature-night'), function(node){
+      node.hidden = !FEATURES.nightMode;
+    });
   }
   var VIEWS = ['home', 'sleep', 'milk', 'solids', 'meds', 'summary', 'report'];
   var DRAFT_KEY = 'cilly.draft', VIEW_KEY = 'cilly.view';
@@ -238,6 +241,12 @@
   function settleView(){
     return (state.settings || {}).settleView === 'average' ? 'average' : 'total';
   }
+  // Night mode is asked for, not assumed: an app that dims and hides most of a
+  // page on its own is a surprise at 3am, and it only suits some people. The
+  // stored choice is read on its own so a phone where the flag is off still
+  // keeps whatever the other phone chose.
+  function nightModeSetting(){ return (state.settings || {}).nightMode === true; }
+  function nightModeOn(){ return FEATURES.nightMode && nightModeSetting(); }
 
   var POSITION_WORDS = { first: 'before the first nap', mid: 'between naps', last: 'before bed' };
 
@@ -1530,12 +1539,13 @@
     tickInt = setInterval(tick, 15000);
   }
   // ---------- night mode ----------
-  // Between the night times, the app dims and the Sleep page drops to the
-  // toggle and the card: everything else is noise when you are standing in the
-  // dark holding a baby. "Show the rest" brings it back for this visit.
+  // Once it is switched on in Settings, the app dims between the night times
+  // and the Sleep page drops to the toggle and the card: everything else is
+  // noise when you are standing in the dark holding a baby. "Show the rest"
+  // brings it back for this visit.
   var nightExpanded = false;
   function applyNightMode(){
-    var night = FEATURES.nightMode && clockIsNight(new Date());
+    var night = nightModeOn() && clockIsNight(new Date());
     document.body.dataset.night = night ? 'true' : 'false';
     document.body.dataset.nightSimple = (night && !nightExpanded) ? 'true' : 'false';
     var btn = el('night-toggle');
@@ -2535,7 +2545,9 @@
     draftBasis = btn.dataset.basis;
     renderBedtimeBasis();
   });
-  el('set-night-start').addEventListener('input', renderBedtimeBasis);
+  // Both hints quote the night times, so they follow the fields as they change.
+  el('set-night-start').addEventListener('input', function(){ renderBedtimeBasis(); renderNightChoice(); });
+  el('set-night-end').addEventListener('input', renderNightChoice);
 
   var draftSettle = 'total';
   function renderSettleChoice(){
@@ -2553,6 +2565,24 @@
     renderSettleChoice();
   });
 
+  var draftNightMode = false;
+  function renderNightChoice(){
+    Array.prototype.forEach.call(el('set-night-mode').querySelectorAll('.unit-btn'), function(btn){
+      btn.setAttribute('aria-pressed', (btn.dataset.night === 'on') === draftNightMode ? 'true' : 'false');
+    });
+    var from = fmtClock(minutesOf(el('set-night-start').value || '19:00'));
+    var to = fmtClock(minutesOf(el('set-night-end').value || '06:00'));
+    el('set-night-mode-hint').textContent = draftNightMode
+      ? 'Between ' + from + ' and ' + to + ' the screen dims and the Sleep page drops to the toggle and the card. "Show the rest" brings it back.'
+      : 'The app looks the same at 3am as it does at noon.';
+  }
+  el('set-night-mode').addEventListener('click', function(ev){
+    var btn = ev.target.closest('.unit-btn');
+    if (!btn) return;
+    draftNightMode = btn.dataset.night === 'on';
+    renderNightChoice();
+  });
+
   function openSettings(){
     if (readOnly) return;
     var s = state.settings || {};
@@ -2563,6 +2593,8 @@
     renderBedtimeBasis();
     draftSettle = settleView();
     renderSettleChoice();
+    draftNightMode = nightModeSetting();
+    renderNightChoice();
     hideError('set-error');
     openOverlay('settings-overlay');
     el('set-dob').focus();
@@ -2648,7 +2680,8 @@
     if (!ns || !ne){ showError('set-error', 'Enter both night times.', ns ? 'set-night-end' : 'set-night-start'); return; }
     closeSettings();
     await commit([{ type: 'settings', settings: Object.assign({}, state.settings, {
-      dob: dob, nightStart: ns, nightEnd: ne, bedtimeBasis: draftBasis, settleView: draftSettle
+      dob: dob, nightStart: ns, nightEnd: ne, bedtimeBasis: draftBasis,
+      settleView: draftSettle, nightMode: draftNightMode
     }) }]);
   });
 

@@ -22,6 +22,12 @@ It holds real family records: treat the live data with care.
   them and `viewAllowed` keeps the page unreachable. Anything new that could
   be unwanted should go behind a flag the same way rather than being
   hard-wired in.
+- A flag says whether a feature exists here; it does not say a family wants
+  it. Night mode is both: the `nightMode` flag makes the Settings row exist,
+  and the `nightMode` setting (off by default, shared between the phones)
+  decides whether the app actually dims — see `nightModeOn` in `js/app.js`.
+  Anything that changes how the app looks or behaves without being asked for
+  should default to off and be switchable in Settings the same way.
 - State changes are expressed as ops (`upsert`, `delete`, `status`,
   `settings`) applied to an in-memory state and persisted through the store;
   see `applyOps` and `commit` in `js/app.js`. Keep new features on that model.

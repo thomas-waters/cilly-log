@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#5B54D6">
   <title>Cilly Log</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
-  <link rel="stylesheet" href="css/app.css?v=20260919-1814">
+  <link rel="stylesheet" href="css/app.css?v=20260919-2254">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -165,6 +165,15 @@
             <button type="button" class="unit-btn" data-settle="average" aria-pressed="false">Average a sleep</button>
           </div>
           <p class="form-hint" id="set-settle-hint"></p>
+        </div>
+
+        <div class="field feature-night" hidden>
+          <span class="field-label" id="set-night-mode-label">Night mode</span>
+          <div class="unit-toggle basis-toggle" id="set-night-mode" role="group" aria-labelledby="set-night-mode-label">
+            <button type="button" class="unit-btn" data-night="off" aria-pressed="true">Off</button>
+            <button type="button" class="unit-btn" data-night="on" aria-pressed="false">On</button>
+          </div>
+          <p class="form-hint" id="set-night-mode-hint"></p>
         </div>
         <div class="field">
           <button type="button" class="btn ghost" id="changelog-btn">Change log</button>
@@ -806,11 +815,11 @@
 
 <div class="toast" id="toast" hidden></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/config.js?v=20260919-1814"></script>
-<script src="js/store.js?v=20260919-1814"></script>
-<script src="js/docx.js?v=20260919-1814"></script>
-<script src="js/changelog.js?v=20260919-1814"></script>
-<script src="js/sleep-model.js?v=20260919-1814"></script>
-<script src="js/app.js?v=20260919-1814"></script>
+<script src="js/config.js?v=20260919-2254"></script>
+<script src="js/store.js?v=20260919-2254"></script>
+<script src="js/docx.js?v=20260919-2254"></script>
+<script src="js/changelog.js?v=20260919-2254"></script>
+<script src="js/sleep-model.js?v=20260919-2254"></script>
+<script src="js/app.js?v=20260919-2254"></script>
 </body>
 </html>

@@ -25,6 +25,16 @@
  */
 window.CILLY_CHANGELOG = [
   {
+    version: '1.13.0',
+    date: '2026-09-19',
+    title: 'Night mode is now your choice',
+    notes: [
+      'Night mode has moved into Settings, and it starts off. Until you switch it on, the app looks the same at 3am as it does at noon.',
+      'Switched on, it works as before: between your night times the screen dims and the Sleep page drops to the toggle and the card, with "Show the rest" to bring everything back.',
+      'The choice is shared, like every other setting, so both phones follow it.'
+    ]
+  },
+  {
     version: '1.12.1',
     date: '2026-09-19',
     title: 'Blank screen at night fixed',
