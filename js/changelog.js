@@ -12,7 +12,9 @@ window.CILLY_CHANGELOG = [
     date: '2026-09-19',
     title: 'Settling times',
     notes: [
-      'A sleep with a put-down time later than the asleep time showed nothing at all, which looked the same as never having logged one. It now says so on the entry, so it can be corrected.',
+      'A put-down time that cannot come before the sleep is now refused when you save, rather than quietly producing no settling time at all.',
+      'A put-down more than three hours before they fell asleep asks whether that is right before saving it.',
+      'A sleep already saved with times that do not fit says so on the entry, so it can be found and corrected.',
       'Time to settle adds up all the settling in a day instead of averaging it. Settings can switch it back to the average per sleep.'
     ]
   },

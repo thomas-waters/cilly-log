@@ -110,16 +110,27 @@
     }
     return e.date;
   }
-  // Minutes between being put down and falling asleep, or null when there is
-  // no put-down time to work from. A gap over six hours means the two times
-  // are the wrong way round rather than a very long settle, so it does not
-  // count; sleepMetaHtml says so on the entry instead of showing nothing.
-  var SETTLE_MAX = 360;
+  // Minutes from being put down to falling asleep, wrapping over midnight so
+  // "down at 23:50, asleep at 00:10" reads as 20 minutes.
+  function settleGap(putDown, start){
+    var d = minutesOf(start) - minutesOf(putDown);
+    if (d < 0) d += 1440;
+    return d;
+  }
+  // Over twelve hours apart the pair cannot be a settle: on a 24 hour clock
+  // that is nearer to the put-down being after the sleep than before it, and
+  // an hour typed as 09:15 instead of 21:15 lands exactly here. The form
+  // refuses to save one, and anything already saved says so on the entry.
+  var SETTLE_MAX = 720;
+  // Beyond three hours the form asks whether it is really right.
+  var SETTLE_CONFIRM = 180;
+  // From here up it reads as a put-down after the sleep rather than a long one.
+  var SETTLE_INVERTED = 1080;
+
   function settleMinutes(e){
     if (!e.putDown) return null;
-    var d = minutesOf(e.start) - minutesOf(e.putDown);
-    if (d < 0) d += 1440;
-    return d > SETTLE_MAX ? null : d;
+    var d = settleGap(e.putDown, e.start);
+    return d >= SETTLE_MAX ? null : d;
   }
   function ageMonths(dobStr, at){
     var dob = new Date(dobStr + 'T00:00:00');
@@ -285,7 +296,11 @@
     if (s !== null) bits.push('<span>' + (s === 0 ? 'Asleep on put-down' : 'Settled in ' + s + 'm') + '</span>');
     // A put-down that cannot produce a settling time used to show nothing at
     // all, which read as "no put-down was logged". Say which it is.
-    else if (e.putDown) bits.push('<span class="meta-warn">Put down at ' + fmtClock(minutesOf(e.putDown)) + ', after the asleep time</span>');
+    else if (e.putDown){
+      var gap = settleGap(e.putDown, e.start);
+      bits.push('<span class="meta-warn">Put down at ' + fmtClock(minutesOf(e.putDown)) +
+        (gap >= SETTLE_INVERTED ? ', after the asleep time' : ', ' + fmtDur(gap * 60000) + ' before') + '</span>');
+    }
     var who = personChip(e);
     if (who) bits.push(who);
     return bits.length ? '<span class="entry-meta">' + bits.join('') + '</span>' : '';
@@ -372,12 +387,43 @@
     el('confirm-text').textContent = opts.text;
     el('confirm-yes').textContent = opts.confirmLabel || 'Delete';
     el('confirm-no').textContent = opts.keepLabel || 'Keep it';
+    // Red is for the ones that throw something away. A "yes, that is right"
+    // should not look like a delete.
+    el('confirm-yes').className = 'btn ' + (opts.tone === 'primary' ? 'primary' : 'danger');
     openOverlay('confirm-overlay');
     el('confirm-no').focus();
   }
   function closeConfirm(){
     closeOverlay('confirm-overlay');
     pendingConfirm = null;
+  }
+
+  // A put-down has to come before the sleep it belongs to. Anything that
+  // cannot is refused outright; anything unusually long is queried rather than
+  // refused, because a genuinely hard night does happen.
+  function guardPutDown(putDown, start, proceed){
+    if (!putDown || !start){ proceed(); return; }
+    var gap = settleGap(putDown, start);
+    var downAt = fmtClock(minutesOf(putDown)), asleepAt = fmtClock(minutesOf(start));
+    if (gap >= SETTLE_MAX){
+      showError('form-error', gap >= SETTLE_INVERTED
+        ? 'Put down at ' + downAt + ' is after they fell asleep at ' + asleepAt + '. Change one of them.'
+        : 'Put down at ' + downAt + ' is ' + fmtDur(gap * 60000) + ' before they fell asleep at ' + asleepAt + '. Check the time.',
+        'f-putdown');
+      return;
+    }
+    if (gap > SETTLE_CONFIRM){
+      askConfirm({
+        title: 'That is a long settle',
+        text: 'Put down at ' + downAt + ', asleep at ' + asleepAt + ' — ' + fmtDur(gap * 60000) + ' of settling. Is that right?',
+        confirmLabel: 'Yes, save it',
+        keepLabel: 'Go back',
+        tone: 'primary',
+        onConfirm: proceed
+      });
+      return;
+    }
+    proceed();
   }
 
   function groupByDay(items, timeOf){
@@ -1350,9 +1396,11 @@
         settleNotes: el('f-settle').value.trim(),
         putDown: el('f-putdown').value
       };
-      showToast('Asleep from ' + fmtTime(new Date(status.since)) + ' saved');
-      closeForm();
-      await commit([{ type: 'status', status: status }]);
+      guardPutDown(status.putDown, el('f-start').value, async function(){
+        showToast('Asleep from ' + fmtTime(new Date(status.since)) + ' saved');
+        closeForm();
+        await commit([{ type: 'status', status: status }]);
+      });
       return;
     }
 
@@ -1384,10 +1432,12 @@
     };
     var ops = [{ type: 'upsert', collection: 'entries', record: entry }];
     if (formMode === 'wake') ops.push({ type: 'status', status: { asleep: false, since: null, settleNotes: '' } });
-    showToast(el('entry-id').value ? 'Sleep updated' :
-      fmtDur(entryEnd(entry) - entryStart(entry)) + ' of sleep logged');
-    closeForm();
-    await commit(ops);
+    var editing = !!el('entry-id').value;
+    guardPutDown(entry.putDown, entry.start, async function(){
+      showToast(editing ? 'Sleep updated' : fmtDur(entryEnd(entry) - entryStart(entry)) + ' of sleep logged');
+      closeForm();
+      await commit(ops);
+    });
   });
 
   el('f-danger').addEventListener('click', function(){
