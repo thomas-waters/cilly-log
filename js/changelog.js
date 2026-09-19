@@ -25,6 +25,17 @@
  */
 window.CILLY_CHANGELOG = [
   {
+    version: '1.15.0',
+    date: '2026-09-19',
+    title: 'Light or dark, your choice',
+    notes: [
+      'Settings is now in two parts: Shared, which both phones see, and Just for you, which is kept on your account and changes nothing on the other phone.',
+      'Appearance: System, Light or Dark. System is what the app has always done — it follows whatever your phone is set to. Light and dark are both proper themes; this just lets you pick one and stay there.',
+      'The choice takes effect as you tap it, and the app opens in it next time rather than flashing the other one first.',
+      'Night mode still takes over between your night times, whichever you choose.'
+    ]
+  },
+  {
     version: '1.14.0',
     date: '2026-09-19',
     title: 'A month at a glance',

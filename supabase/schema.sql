@@ -51,7 +51,10 @@ create table if not exists public.meds (
   updated_at timestamptz not null default now()
 );
 
--- Single-row settings: key = 'status' (current sleep) or 'settings' (DOB, night hours).
+-- Key/value state. 'status' is the current sleep and 'settings' the shared
+-- settings (DOB, night hours) - both single rows the whole family reads.
+-- 'prefs:<email>' is one row per person for their own preferences, such as
+-- light or dark; the app only ever reads the row matching who is signed in.
 create table if not exists public.app_state (
   key        text primary key,
   value      jsonb not null,

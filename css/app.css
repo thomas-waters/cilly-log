@@ -62,7 +62,12 @@
       --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 28px -12px rgba(0,0,0,.55);
     }
   }
+  /* A chosen palette has to reach the parts the app does not paint: date and
+     time pickers, scrollbars, the text cursor. Without this a forced dark app
+     opens a white date picker. */
+  :root[data-theme="light"]{ color-scheme:light; }
   :root[data-theme="dark"]{
+    color-scheme:dark;
     --bg:#131220;
     --surface:#1C1A2C;
     --surface-2:#242238;
@@ -502,6 +507,17 @@
     margin:0;
   }
   form{ display:flex; flex-direction:column; gap:12px; }
+  /* Settings is two lists now: what both phones share, and what is this
+     person's alone. The rule between them does the explaining that a heading
+     on its own cannot. */
+  .set-section{ display:flex; flex-direction:column; gap:12px; }
+  .set-section + .set-section{ border-top:1px solid var(--border); padding-top:14px; }
+  .set-section-head{
+    margin:0; font-family:inherit;
+    font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--ink-soft);
+  }
+  .set-section .form-hint + .field{ margin-top:-4px; }
   .field{ display:flex; flex-direction:column; gap:5px; }
   .field label, .field-label{ font-size:0.8rem; color:var(--ink-soft); font-weight:500; }
   /* A toggle on its own line, so two wordy options still fit a phone. */

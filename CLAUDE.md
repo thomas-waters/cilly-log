@@ -29,8 +29,20 @@ It holds real family records: treat the live data with care.
   Anything that changes how the app looks or behaves without being asked for
   should default to off and be switchable in Settings the same way.
 - State changes are expressed as ops (`upsert`, `delete`, `status`,
-  `settings`) applied to an in-memory state and persisted through the store;
-  see `applyOps` and `commit` in `js/app.js`. Keep new features on that model.
+  `settings`, `prefs`) applied to an in-memory state and persisted through the
+  store; see `applyOps` and `commit` in `js/app.js`. Keep new features on that
+  model.
+- **Settings are shared, preferences are not.** `state.settings` is one
+  `app_state` row both phones read, so anything about Cillian or about how the
+  family logs belongs there. `state.prefs` is a row per person,
+  `prefs:<their email>`, written by the `prefs` op — anything that is one
+  parent's taste rather than a fact about the baby belongs there, and Settings
+  shows the two in separate sections. Neither needs a migration: both are rows
+  in the existing `app_state` table. The appearance choice (`theme`: `system`,
+  `light` or `dark`) is the first of them: it sets `data-theme` on the root,
+  and is cached in `localStorage` so the script at the top of `index.html` can
+  paint the right palette before the database answers. That cache is also
+  seeded into `state.prefs` at startup, or the first render would wipe it.
 - Every page has the same shape: a card at the top opens a form in an overlay
   (`openOverlay` / `closeOverlay`), and saving shows a toast and closes it.
   Each overlay lives inside its own view, so only the current view's can be on

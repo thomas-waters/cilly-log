@@ -637,6 +637,8 @@
         state.status = op.status;
       } else if (op.type === 'settings'){
         state.settings = op.settings;
+      } else if (op.type === 'prefs'){
+        state.prefs = op.prefs;
       }
     });
   }
@@ -648,6 +650,7 @@
   }
   // ---------- render all ----------
   function renderAll(){
+    applyTheme();
     applyNightMode();
     renderSleep();
     renderMilk();
@@ -1856,6 +1859,35 @@
     tick();
     tickInt = setInterval(tick, 15000);
   }
+  // ---------- appearance ----------
+  // Both palettes have always been there; what was missing was a say in which
+  // one. Nothing chosen means the app follows the phone, as it always did.
+  // The choice belongs to the person, not the family: it is stored on their
+  // account so it follows them to another phone, and cached on this device so
+  // the right palette is painted before the database has answered - see the
+  // script at the top of index.html.
+  var THEME_KEY = 'cilly.theme';
+  function themeChoice(){
+    var t = (state.prefs || {}).theme;
+    return t === 'light' || t === 'dark' ? t : 'system';
+  }
+  function applyTheme(){
+    var choice = themeChoice();
+    if (choice === 'system') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', choice);
+    try { window.localStorage.setItem(THEME_KEY, choice); } catch (e) {}
+  }
+  // Start from the cached choice rather than the empty state, or the first
+  // render would undo what the script in the head just did and flash the
+  // phone's palette until the database answered.
+  (function(){
+    try {
+      var cached = window.localStorage.getItem(THEME_KEY);
+      if (cached === 'light' || cached === 'dark') state.prefs.theme = cached;
+    } catch (e) {}
+  })();
+  applyTheme();
+
   // ---------- night mode ----------
   // Once it is switched on in Settings, the app dims between the night times
   // and the Sleep page drops to the toggle and the card: everything else is
@@ -2901,6 +2933,40 @@
     renderNightChoice();
   });
 
+  // The name on the other account, where there is exactly one, so the section
+  // can say whose choices these are not.
+  function otherPersonName(){
+    var people = state.people || {}, me = state.me || '';
+    var names = Object.keys(people)
+      .filter(function(email){ return email !== me; })
+      .map(function(email){ return people[email]; })
+      .filter(Boolean);
+    return names.length === 1 ? names[0] : '';
+  }
+  function renderThemeChoice(){
+    var choice = themeChoice();
+    Array.prototype.forEach.call(el('set-theme').querySelectorAll('.unit-btn'), function(btn){
+      btn.setAttribute('aria-pressed', btn.dataset.theme === choice ? 'true' : 'false');
+    });
+    el('set-theme-hint').textContent = (choice === 'system'
+      ? 'Follows whatever your phone is set to.'
+      : 'Always ' + choice + ', whatever your phone is set to.') +
+      (nightModeSetting() ? ' Night mode still takes over between your night times.' : '');
+    var other = otherPersonName();
+    el('set-yours-hint').textContent = state.me
+      ? 'Kept on your account' + (other ? ', not ' + other + '’s.' : ', so the other phone keeps its own.')
+      : 'Kept on this device.';
+  }
+  // Applied and kept as it is tapped. An appearance you cannot see until you
+  // press Save is no way to choose one, and since it is nobody else's, there
+  // is nothing for Save or Cancel to weigh up.
+  el('set-theme').addEventListener('click', function(ev){
+    var btn = ev.target.closest('.unit-btn');
+    if (!btn || btn.dataset.theme === themeChoice()) return;
+    commit([{ type: 'prefs', prefs: Object.assign({}, state.prefs, { theme: btn.dataset.theme }) }]);
+    renderThemeChoice();
+  });
+
   function openSettings(){
     if (readOnly) return;
     var s = state.settings || {};
@@ -2913,6 +2979,7 @@
     renderSettleChoice();
     draftNightMode = nightModeSetting();
     renderNightChoice();
+    renderThemeChoice();
     hideError('set-error');
     openOverlay('settings-overlay');
     el('set-dob').focus();

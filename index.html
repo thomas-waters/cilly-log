@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#5B54D6">
   <title>Cilly Log</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
-  <link rel="stylesheet" href="css/app.css?v=20260919-2344">
+  <link rel="stylesheet" href="css/app.css?v=20260919-2351">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -15,6 +15,15 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Cilly Log">
+  <script>
+    // The palette, before anything is drawn. The chosen one is cached here by
+    // js/app.js; without this the app paints whatever the phone is set to and
+    // then corrects itself, which at 3am is a slap in the face.
+    try {
+      var t = window.localStorage.getItem('cilly.theme');
+      if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  </script>
 </head>
 <body>
 <section class="page" id="auth-panel" hidden aria-label="Sign in">
@@ -133,6 +142,9 @@
         </button>
       </div>
       <form id="settings-form">
+        <section class="set-section" aria-labelledby="set-shared-head">
+        <h3 class="set-section-head" id="set-shared-head">Shared</h3>
+        <p class="form-hint">Both phones see these.</p>
         <div class="field">
           <label for="set-dob">Date of birth</label>
           <input type="date" id="set-dob">
@@ -175,6 +187,24 @@
           </div>
           <p class="form-hint" id="set-night-mode-hint"></p>
         </div>
+        </section>
+
+        <!-- Yours alone: stored against the account that is signed in, so the
+             other parent's app is untouched by anything in here. -->
+        <section class="set-section" aria-labelledby="set-yours-head">
+        <h3 class="set-section-head" id="set-yours-head">Just for you</h3>
+        <p class="form-hint" id="set-yours-hint">Kept on your account.</p>
+        <div class="field">
+          <span class="field-label" id="set-theme-label">Appearance</span>
+          <div class="unit-toggle basis-toggle" id="set-theme" role="group" aria-labelledby="set-theme-label">
+            <button type="button" class="unit-btn" data-theme="system" aria-pressed="true">System</button>
+            <button type="button" class="unit-btn" data-theme="light" aria-pressed="false">Light</button>
+            <button type="button" class="unit-btn" data-theme="dark" aria-pressed="false">Dark</button>
+          </div>
+          <p class="form-hint" id="set-theme-hint"></p>
+        </div>
+        </section>
+
         <div class="field">
           <button type="button" class="btn ghost" id="changelog-btn">Change log</button>
         </div>
@@ -875,11 +905,11 @@
 
 <div class="toast" id="toast" hidden></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/config.js?v=20260919-2344"></script>
-<script src="js/store.js?v=20260919-2344"></script>
-<script src="js/docx.js?v=20260919-2344"></script>
-<script src="js/changelog.js?v=20260919-2344"></script>
-<script src="js/sleep-model.js?v=20260919-2344"></script>
-<script src="js/app.js?v=20260919-2344"></script>
+<script src="js/config.js?v=20260919-2351"></script>
+<script src="js/store.js?v=20260919-2351"></script>
+<script src="js/docx.js?v=20260919-2351"></script>
+<script src="js/changelog.js?v=20260919-2351"></script>
+<script src="js/sleep-model.js?v=20260919-2351"></script>
+<script src="js/app.js?v=20260919-2351"></script>
 </body>
 </html>
