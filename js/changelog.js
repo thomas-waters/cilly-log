@@ -25,6 +25,17 @@
  */
 window.CILLY_CHANGELOG = [
   {
+    version: '1.9.0',
+    date: '2026-09-19',
+    title: 'Medicine, longer trends, food history and a night mode',
+    notes: [
+      'Medicine: a page for what was given, with the next dose worked out from the gap you enter. It shows both of you the same times, so nobody gives a second dose too early. Switched on per environment once its table exists.',
+      'Summary covers 1 week, 4 weeks or 12 weeks. Longer stretches show a row a week rather than a row a day, which is where a change of pattern shows up.',
+      'Solids has a Foods so far list: every food, when it was last given and how many times, with a search box for "when did he last have egg?".',
+      'Night mode: between your night times the app dims and the Sleep page drops to the toggle and the card. "Show the rest" brings everything back.'
+    ]
+  },
+  {
     version: '1.8.2',
     date: '2026-09-19',
     title: 'Version numbers now mean something',

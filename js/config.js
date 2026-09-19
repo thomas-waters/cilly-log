@@ -6,14 +6,20 @@
 // /staging/ deployment and local testing — uses the staging project, so
 // experiments can never touch the real log.
 (function(){
+  // Features that can be switched off without unpicking the code: off means
+  // the app behaves as it did before the feature existed, with no leftover
+  // buttons. `medicine` needs its table in the database, so it stays off on
+  // an environment until the migration has been run there.
   var ENVIRONMENTS = {
     live: {
       supabaseUrl: 'https://hopvsalkhtgrqbbkioqn.supabase.co',
-      supabaseAnonKey: 'sb_publishable_IXpyCf7727af0cpGUfP9_Q_R2VOZSJm'
+      supabaseAnonKey: 'sb_publishable_IXpyCf7727af0cpGUfP9_Q_R2VOZSJm',
+      features: { medicine: false, nightMode: true }
     },
     staging: {
       supabaseUrl: 'https://kmcviicuibnetrbzcctd.supabase.co',
-      supabaseAnonKey: 'sb_publishable__E2EZvlD4A73QaPx0GlDyQ_pFWFptyB'
+      supabaseAnonKey: 'sb_publishable__E2EZvlD4A73QaPx0GlDyQ_pFWFptyB',
+      features: { medicine: true, nightMode: true }
     }
   };
 

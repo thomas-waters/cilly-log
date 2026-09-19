@@ -14,6 +14,10 @@
     --solid-soft:#E1EFE3;
     --milk-ink:#FFFFFF;
     --solid-ink:#FFFFFF;
+    --med:#4A5A6E;
+    --med-soft:#E7EBF0;
+    --med-ink:#FFFFFF;
+    --bg-meds:#F3F5F8;
     --bg-sleep:#F4F3FB;
     --bg-milk:#FBF2F6;
     --bg-solids:#F2F7F2;
@@ -40,6 +44,10 @@
       --solid-soft:#1E3324;
       --milk-ink:#131220;
       --solid-ink:#131220;
+      --med:#A8B6CC;
+      --med-soft:#2A3242;
+      --med-ink:#131220;
+      --bg-meds:#141821;
       --bg-sleep:#15142A;
       --bg-milk:#1E1420;
       --bg-solids:#121B15;
@@ -66,6 +74,10 @@
     --solid-soft:#1E3324;
     --milk-ink:#131220;
     --solid-ink:#131220;
+    --med:#A8B6CC;
+    --med-soft:#2A3242;
+    --med-ink:#131220;
+    --bg-meds:#141821;
     --bg-sleep:#15142A;
     --bg-milk:#1E1420;
     --bg-solids:#121B15;
@@ -75,6 +87,38 @@
     --danger-soft:#3A2229;
     --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 28px -12px rgba(0,0,0,.55);
   }
+
+  /* Night mode. Tokens rather than a filter: a filter on an ancestor makes it
+     the containing block for fixed children, which would break the overlays.
+     It overrides whichever theme is in use, because at 3am nobody wants the
+     light one. */
+  body[data-night="true"]{
+    --bg:#0B0A13;
+    --surface:#131120;
+    --surface-2:#191727;
+    --ink:#9A96B4;
+    --ink-soft:#6A6684;
+    --border:#221F33;
+    --accent:#6E68B8;
+    --accent-ink:#0B0A13;
+    --accent-soft:#1E1C30;
+    --milk:#9E5C7C;
+    --solid:#5F8E6B;
+    --med:#71809A;
+    --warn:#9C7A45;
+    --warn-soft:#241E15;
+    --danger:#8E5A66;
+    --danger-soft:#241A1E;
+    --shadow: 0 1px 2px rgba(0,0,0,.4);
+    background:var(--bg);
+  }
+  /* In simple mode only what a half-asleep parent needs is on screen. The
+     button below the card brings the rest back. */
+  body[data-night-simple="true"] .view-sleep .panel,
+  body[data-night-simple="true"] .view-sleep .stats-row,
+  body[data-night-simple="true"] .view-sleep .log-toolbar,
+  body[data-night-simple="true"] .view-sleep .log{ display:none; }
+  .night-toggle{ align-self:center; }
 
   *{box-sizing:border-box;}
   body{
@@ -92,13 +136,16 @@
   #app[data-view="home"] .view-home,
   #app[data-view="sleep"] .view-sleep,
   #app[data-view="milk"] .view-milk,
+  #app[data-view="meds"] .view-meds,
   #app[data-view="solids"] .view-solids,
   #app[data-view="summary"] .view-summary{ display:flex; }
   body[data-view="sleep"]{ background:var(--bg-sleep); }
   body[data-view="milk"]{ background:var(--bg-milk); }
   body[data-view="solids"]{ background:var(--bg-solids); }
+  body[data-view="meds"]{ background:var(--bg-meds); }
   .view-milk{ --accent:var(--milk); --accent-soft:var(--milk-soft); --accent-ink:var(--milk-ink); }
   .view-solids{ --accent:var(--solid); --accent-soft:var(--solid-soft); --accent-ink:var(--solid-ink); }
+  .view-meds{ --accent:var(--med); --accent-soft:var(--med-soft); --accent-ink:var(--med-ink); }
 
   .notice{
     background:var(--warn-soft);
@@ -189,6 +236,22 @@
   }
   .meta-warn{ color:var(--warn); font-weight:600; }
   .meta-quiet{ opacity:.7; font-style:italic; }
+  .food-list{ display:flex; flex-direction:column; }
+  .food-row{
+    display:flex; align-items:baseline; gap:10px;
+    padding:7px 0;
+    border-bottom:1px solid var(--border);
+    font-size:0.85rem;
+  }
+  .food-row:last-child{ border-bottom:none; }
+  .food-name{ flex:1; min-width:0; font-weight:600; overflow-wrap:anywhere; }
+  .food-when{ color:var(--ink-soft); font-size:0.78rem; white-space:nowrap; }
+  .food-times{
+    font-family:"JetBrains Mono", ui-monospace, monospace;
+    font-size:0.72rem; color:var(--ink-soft); white-space:nowrap;
+    min-width:34px; text-align:right;
+  }
+  #food-search{ margin-bottom:4px; }
   .chips-label{ font-size:0.72rem; font-weight:600; color:var(--ink-soft); align-self:center; margin-right:2px; }
   .form-hint{ margin:0; font-size:0.78rem; color:var(--ink-soft); line-height:1.4; }
 
@@ -257,6 +320,7 @@
   .nav-icon[data-type="sleep"], .event-icon[data-type="sleep"]{ background:var(--accent-soft); color:var(--accent); }
   .nav-icon[data-type="milk"], .event-icon[data-type="milk"]{ background:var(--milk-soft); color:var(--milk); }
   .nav-icon[data-type="solids"], .event-icon[data-type="solids"]{ background:var(--solid-soft); color:var(--solid); }
+  .nav-icon[data-type="meds"], .event-icon[data-type="meds"]{ background:var(--med-soft); color:var(--med); }
   .nav-icon[data-type="summary"]{ background:var(--surface-2); color:var(--ink-soft); }
   .nav-text{ flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
   .nav-title{ font-family:"Fraunces", Georgia, serif; font-size:1.15rem; font-weight:600; }

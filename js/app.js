@@ -5,14 +5,28 @@
     bottle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M10 2.5h4v2.5h-4z"/><path d="M9 5h6l1.5 3h-9z"/><path d="M8 8h8v10.5A2.5 2.5 0 0 1 13.5 21h-3A2.5 2.5 0 0 1 8 18.5z"/><path d="M8 12h8M8 15.5h8"/></svg>',
     bowl: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M3 11h18a9 9 0 0 1-18 0z"/><path d="M8 11c0-3 1.6-5 4-5s4 2 4 5"/><path d="M6 20h12"/></svg>'
   };
-  var TYPE_ICON = { sleep: ICON.moon, milk: ICON.bottle, solids: ICON.bowl };
-  var VIEWS = ['home', 'sleep', 'milk', 'solids', 'summary'];
+  ICON.pill = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="2.5" y="8.5" width="19" height="7" rx="3.5"/><path d="M12 8.5v7"/></svg>';
+  var TYPE_ICON = { sleep: ICON.moon, milk: ICON.bottle, solids: ICON.bowl, meds: ICON.pill };
+
+  // Features that can be switched off in js/config.js. Off means the pages,
+  // tiles and entries for that feature are simply not there.
+  var FEATURES = Object.assign(
+    { medicine: false, nightMode: false },
+    (window.CILLY_CONFIG || {}).features || {}
+  );
+  function applyFeatureFlags(){
+    Array.prototype.forEach.call(document.querySelectorAll('.feature-medicine'), function(node){
+      node.hidden = !FEATURES.medicine;
+    });
+  }
+  var VIEWS = ['home', 'sleep', 'milk', 'solids', 'meds', 'summary'];
   var DRAFT_KEY = 'cilly.draft', VIEW_KEY = 'cilly.view';
   var DRAFT_MAX_AGE = 30 * 60000;
   var FORM_FIELDS = {
     'entry-form': ['entry-id', 'f-date', 'f-putdown', 'f-start', 'f-end', 'f-settle', 'f-wake'],
     'milk-form': ['m-id', 'm-date', 'm-time', 'm-amount', 'm-notes'],
-    'solid-form': ['s-id', 's-date', 's-time', 's-food', 's-notes']
+    'solid-form': ['s-id', 's-date', 's-time', 's-food', 's-notes'],
+    'med-form': ['md-id', 'md-date', 'md-time', 'md-name', 'md-dose', 'md-notes']
   };
 
   var store = null;
@@ -360,7 +374,7 @@
   // Each one lives inside its own view, so only the current view's can show.
   // The confirm is first: it opens over the others, so Escape should reach it
   // before the form underneath.
-  var OVERLAYS = ['confirm-overlay', 'changelog-overlay', 'settings-overlay', 'entry-overlay', 'milk-overlay', 'solid-overlay'];
+  var OVERLAYS = ['confirm-overlay', 'changelog-overlay', 'settings-overlay', 'entry-overlay', 'milk-overlay', 'solid-overlay', 'med-overlay'];
   function openOverlay(id){
     el(id).hidden = false;
   }
@@ -471,6 +485,7 @@
   }
 
   function goTo(view){
+    if (!viewAllowed(view)) view = 'home';
     // Arriving at a page starts at the top, but opening a form on the page you
     // are already on is not arriving anywhere: editing an entry half way down
     // the log should leave the log where it was.
@@ -481,9 +496,13 @@
     if (moved) window.scrollTo({ top: 0 });
   }
 
+  function viewAllowed(v){
+    if (v === 'meds') return !!FEATURES.medicine;
+    return VIEWS.indexOf(v) >= 0;
+  }
   function restoreView(){
     var v = ssGet(VIEW_KEY);
-    setView(VIEWS.indexOf(v) >= 0 ? v : 'home');
+    setView(viewAllowed(v) ? v : 'home');
   }
 
   function openEditor(kind, id){
@@ -491,6 +510,7 @@
     if (kind === 'sleep'){ goTo('sleep'); openForm(id); }
     else if (kind === 'milk'){ editMilk(id, false); }
     else if (kind === 'solids'){ editSolid(id, false); }
+    else if (kind === 'meds'){ editMed(id, false); }
   }
 
   // ---------- drafts: what someone is mid-typing survives a reload ----------
@@ -512,6 +532,10 @@
     if (formId === 'milk-form'){
       entry.bottle = el('m-bottle').checked;
       entry.open = !el('milk-overlay').hidden;
+    }
+    if (formId === 'med-form'){
+      entry.gap = medDraftGap;
+      entry.open = !el('med-overlay').hidden;
     }
     draft[formId] = entry;
     draft.at = Date.now();
@@ -564,6 +588,18 @@
       }
     }
 
+    var md = draft['med-form'];
+    if (md){
+      var medId = md.fields['md-id'];
+      if (!medId || editMed(medId, true)){
+        setFields(md.fields);
+        if (md.gap != null) medDraftGap = md.gap;
+        renderMedHelpers();
+        if (md.open) openOverlay('med-overlay');
+        snapshotForm('med-form');
+      }
+    }
+
     var so = draft['solid-form'];
     if (so){
       var solidId = so.fields['s-id'];
@@ -601,9 +637,11 @@
   }
   // ---------- render all ----------
   function renderAll(){
+    applyNightMode();
     renderSleep();
     renderMilk();
     renderSolids();
+    renderMeds();
     renderHome();
     renderSummary();
   }
@@ -670,14 +708,14 @@
   }
 
   function deltaHtml(now, before, format){
-    if (!before) return '<span class="summary-delta">no figure for the week before</span>';
+    if (!before) return '<span class="summary-delta">no figure for the ' + periodLabel() + ' before</span>';
     var diff = now - before;
     var pct = Math.round((diff / before) * 100);
-    if (Math.abs(pct) < 1) return '<span class="summary-delta">about the same as the week before</span>';
+    if (Math.abs(pct) < 1) return '<span class="summary-delta">about the same as the ' + periodLabel() + ' before</span>';
     var dir = diff > 0 ? 'up' : 'down';
     var arrow = diff > 0 ? '↑' : '↓';
     return '<span class="summary-delta" data-dir="' + dir + '">' + arrow + ' ' + format(Math.abs(diff)) +
-      ' (' + (diff > 0 ? '+' : '−') + Math.abs(pct) + '%) vs the week before</span>';
+      ' (' + (diff > 0 ? '+' : '−') + Math.abs(pct) + '%) vs the ' + periodLabel() + ' before</span>';
   }
 
   function summaryTile(label, value, now, before, format, daysCounted){
@@ -691,9 +729,35 @@
     '</div>';
   }
 
+  // How far back the Summary looks. A week is the day-to-day view; four and
+  // twelve are where a change of pattern shows up - naps dropping from three
+  // to two, or nights lengthening - which a single week cannot show.
+  var PERIOD_KEY = 'cilly.period';
+  var summaryDays = (function(){
+    var saved = Number(ssGet(PERIOD_KEY));
+    return [7, 28, 84].indexOf(saved) >= 0 ? saved : 7;
+  })();
+  function periodLabel(){ return summaryDays === 7 ? 'week' : summaryDays === 28 ? '4 weeks' : '12 weeks'; }
+  function periodName(days){
+    return days === 7 ? 'the last 7 days' : 'the last ' + (days / 7) + ' weeks';
+  }
+  function renderPeriodChoice(){
+    Array.prototype.forEach.call(el('summary-period').querySelectorAll('.unit-btn'), function(btn){
+      btn.setAttribute('aria-pressed', Number(btn.dataset.days) === summaryDays ? 'true' : 'false');
+    });
+  }
+  el('summary-period').addEventListener('click', function(ev){
+    var btn = ev.target.closest('.unit-btn');
+    if (!btn) return;
+    summaryDays = Number(btn.dataset.days);
+    ssSet(PERIOD_KEY, summaryDays);
+    renderSummary();
+  });
+
   function renderSummary(){
-    var thisWeek = statsFor(dayKeysEndingToday(0, 7));
-    var lastWeek = statsFor(dayKeysEndingToday(1, 7));
+    renderPeriodChoice();
+    var thisWeek = statsFor(dayKeysEndingToday(0, summaryDays));
+    var lastWeek = statsFor(dayKeysEndingToday(1, summaryDays));
     var perDay = function(v){ return (Math.round(v * 10) / 10) + ' a day'; };
     var meals = perDay;
 
@@ -705,15 +769,18 @@
 
     renderDayTable();
     renderNorms();
-    el('print-heading').textContent = 'Cilly Log — 7 days to ' +
+    el('print-heading').textContent = 'Cilly Log — ' + summaryDays + ' days to ' +
       new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    el('summary-tagline').textContent = 'The last ' + (summaryDays === 7 ? '7 days' : (summaryDays / 7) + ' weeks') + ', and how they compare.';
 
-    var sub = thisWeek.sleepPerDayMs ? fmtDur(thisWeek.sleepPerDayMs) + ' sleep a day this week' : 'Nothing logged this week';
+    var sub = thisWeek.sleepPerDayMs
+      ? fmtDur(thisWeek.sleepPerDayMs) + ' sleep a day over ' + periodName(summaryDays)
+      : 'Nothing logged in ' + periodName(summaryDays);
     if (thisWeek.feedsPerDay) sub += ' · ' + perDay(thisWeek.feedsPerDay) + ' feeds';
     el('home-summary-sub').textContent = sub;
   }
 
-  // How the last 7 days sit against the ranges for their age. These are
+  // How the chosen period sits against the ranges for their age. These are
   // population ranges, not targets, and the note under the table says so.
   function renderNorms(){
     var panel = el('norms-panel'), age = currentAge();
@@ -722,7 +789,7 @@
     var band = age.band;
 
     var set = {};
-    dayKeysEndingToday(0, 7).forEach(function(k){ set[k] = true; });
+    dayKeysEndingToday(0, summaryDays).forEach(function(k){ set[k] = true; });
     var night = {}, day = {}, naps = {}, total = {};
     state.entries.forEach(function(e){
       var key = sleepDayKey(e);
@@ -738,16 +805,16 @@
     // comparison read as settled.
     var loggedDays = Object.keys(total).length;
     var warn = el('norms-warn');
-    warn.hidden = loggedDays >= 7;
+    warn.hidden = loggedDays >= summaryDays;
     if (!warn.hidden){
       // A missed day or two is ordinary, so it is said quietly. The amber box
-      // is kept for a week thin enough that the figures cannot carry it, or it
-      // would be on screen most weeks and stop being read.
-      warn.className = loggedDays >= 5 ? 'note-soft' : 'warn-note';
+      // is kept for a stretch thin enough that the figures cannot carry it, or
+      // it would be on screen most weeks and stop being read.
+      warn.className = loggedDays >= Math.ceil(summaryDays * 0.7) ? 'note-soft' : 'warn-note';
       warn.textContent = loggedDays === 0
-        ? 'Nothing logged in the last 7 days, so there is nothing to compare yet.'
-        : 'Based on ' + plural(loggedDays, 'day') + ' of the last 7. Until there is a full week, ' +
-          'read these as a rough guide rather than a fair comparison.';
+        ? 'Nothing logged in ' + periodName(summaryDays) + ', so there is nothing to compare yet.'
+        : 'Based on ' + plural(loggedDays, 'day') + ' of the last ' + summaryDays + '. Until the whole ' +
+          'stretch is logged, read these as a rough guide rather than a fair comparison.';
     }
 
     // Each row counts its own days: a day with naps written down but no night
@@ -766,7 +833,7 @@
         var flag = stat.avg < low ? ['down', 'below'] : stat.avg > high ? ['up', 'above'] : ['', 'in range'];
         verdict = '<span class="norm-flag"' + (flag[0] ? ' data-dir="' + flag[0] + '"' : '') + '>' + flag[1] + '</span>';
       }
-      var basis = stat.days < 7 ? '<span class="norm-days">' + plural(stat.days, 'day') + '</span>' : '';
+      var basis = stat.days < summaryDays ? '<span class="norm-days">' + plural(stat.days, 'day') + '</span>' : '';
       return '<tr>' +
         '<td>' + label + '</td>' +
         '<td>' + format(stat.avg) + '<span class="norm-meta">' + verdict + '</span>' + basis + '</td>' +
@@ -794,19 +861,42 @@
       '— it is a question for your health visitor or GP, not a verdict.';
   }
 
-  function renderDayTable(){
-    var keys = dayKeysEndingToday(0, 7).slice().reverse();
-    var rows = keys.map(function(key){
-      var night = 0, naps = 0, feeds = 0, meals = 0;
-      state.entries.forEach(function(e){
-        if (sleepDayKey(e) !== key) return;
-        var dur = entryEnd(e) - entryStart(e);
-        if (isNight(e)) night += dur; else naps += dur;
-      });
-      state.feeds.forEach(function(f){ if (f.date === key) feeds++; });
-      state.solids.forEach(function(s){ if (s.date === key) meals++; });
-      return { key: key, night: night, naps: naps, feeds: feeds, meals: meals };
+  function dayTotals(key){
+    var night = 0, naps = 0, feeds = 0, meals = 0;
+    state.entries.forEach(function(e){
+      if (sleepDayKey(e) !== key) return;
+      var dur = entryEnd(e) - entryStart(e);
+      if (isNight(e)) night += dur; else naps += dur;
     });
+    state.feeds.forEach(function(f){ if (f.date === key) feeds++; });
+    state.solids.forEach(function(s){ if (s.date === key) meals++; });
+    return { key: key, night: night, naps: naps, feeds: feeds, meals: meals };
+  }
+
+  function renderDayTable(){
+    var keys = dayKeysEndingToday(0, summaryDays).slice().reverse();
+    var byWeek = summaryDays > 7;
+    var days = keys.map(dayTotals);
+    // Twelve weeks of days is a wall of numbers, so longer periods show one
+    // row a week, each holding that week's daily average rather than its
+    // total: the rows stay comparable with the one-week view.
+    var rows = !byWeek ? days : (function(){
+      var out = [];
+      for (var i = 0; i < days.length; i += 7){
+        var week = days.slice(i, i + 7);
+        var logged = week.filter(function(d){ return d.night + d.naps + d.feeds + d.meals > 0; }).length;
+        var sum = function(pick){ return week.reduce(function(a, d){ return a + pick(d); }, 0); };
+        out.push({
+          key: week[0].key,
+          label: 'Week to ' + friendlyDate(week[week.length - 1].key),
+          night: logged ? sum(function(d){ return d.night; }) / logged : 0,
+          naps: logged ? sum(function(d){ return d.naps; }) / logged : 0,
+          feeds: logged ? sum(function(d){ return d.feeds; }) / logged : 0,
+          meals: logged ? sum(function(d){ return d.meals; }) / logged : 0
+        });
+      }
+      return out;
+    })();
 
     // Each column averages over the days that have a figure in that column.
     function columnAverage(pick){
@@ -824,21 +914,24 @@
       feeds: columnAverage(function(r){ return r.feeds; }),
       meals: columnAverage(function(r){ return r.meals; })
     };
-    var loggedDays = rows.filter(function(r){ return r.night + r.naps + r.feeds + r.meals > 0; }).length;
+    var loggedDays = days.filter(function(r){ return r.night + r.naps + r.feeds + r.meals > 0; }).length;
+    var count = function(v){ return v ? (byWeek ? Math.round(v * 10) / 10 : v) : '—'; };
 
     var body = rows.map(function(r){
       return '<tr>' +
-        '<td>' + friendlyDate(r.key) + '</td>' +
+        '<td>' + (r.label || friendlyDate(r.key)) + '</td>' +
         '<td>' + (r.night ? fmtDur(r.night) : '—') + '</td>' +
         '<td>' + (r.naps ? fmtDur(r.naps) : '—') + '</td>' +
         '<td>' + ((r.night + r.naps) ? fmtDur(r.night + r.naps) : '—') + '</td>' +
-        '<td>' + (r.feeds || '—') + '</td>' +
-        '<td>' + (r.meals || '—') + '</td>' +
+        '<td>' + count(r.feeds) + '</td>' +
+        '<td>' + count(r.meals) + '</td>' +
       '</tr>';
     }).join('');
 
+    el('day-table-heading').textContent = byWeek ? 'Week by week' : 'Day by day';
+    el('day-table-range').textContent = 'Last ' + (byWeek ? (summaryDays / 7) + ' weeks' : '7 days');
     el('day-table').innerHTML =
-      '<thead><tr><th>Day</th><th>Night</th><th>Naps</th><th>Total</th><th>Feeds</th><th>Meals</th></tr></thead>' +
+      '<thead><tr><th>' + (byWeek ? 'Week' : 'Day') + '</th><th>Night</th><th>Naps</th><th>Total</th><th>Feeds</th><th>Meals</th></tr></thead>' +
       '<tbody>' + body + '</tbody>' +
       '<tfoot><tr>' +
         '<td>Average</td>' +
@@ -849,9 +942,11 @@
         '<td>' + (avg.meals ? Math.round(avg.meals * 10) / 10 : '—') + '</td>' +
       '</tr></tfoot>';
 
-    el('day-table-note').textContent = loggedDays === 7
-      ? 'Averages cover all 7 days.'
-      : 'Averages count only days with something logged (' + plural(loggedDays, 'day') + ' of 7). Each column counts its own days.';
+    el('day-table-note').textContent =
+      (byWeek ? 'Each row is that week’s daily average, not its total. ' : '') +
+      (loggedDays === summaryDays
+        ? 'Averages cover all ' + summaryDays + ' days.'
+        : 'Averages count only days with something logged (' + plural(loggedDays, 'day') + ' of ' + summaryDays + '). Each column counts its own days.');
   }
 
   function csvCell(value){
@@ -889,6 +984,12 @@
       if (cutoff && s.date < cutoff) return;
       rows.push(['Solids', s.date, s.time, '', '', '', '', '', '', (s.foods || []).join('; '), '', '', s.notes || '', personName(s)]);
     });
+    if (FEATURES.medicine){
+      state.meds.forEach(function(m){
+        if (cutoff && m.date < cutoff) return;
+        rows.push(['Medicine', m.date, m.time, '', '', '', '', m.name || '', m.dose || '', '', '', '', m.notes || '', personName(m)]);
+      });
+    }
 
     var header = rows.shift();
     rows.sort(function(a, b){
@@ -1257,8 +1358,27 @@
     tick();
     tickInt = setInterval(tick, 15000);
   }
+  // ---------- night mode ----------
+  // Between the night times, the app dims and the Sleep page drops to the
+  // toggle and the card: everything else is noise when you are standing in the
+  // dark holding a baby. "Show the rest" brings it back for this visit.
+  var nightExpanded = false;
+  function applyNightMode(){
+    var night = FEATURES.nightMode && clockIsNight(new Date());
+    document.body.dataset.night = night ? 'true' : 'false';
+    document.body.dataset.nightSimple = (night && !nightExpanded) ? 'true' : 'false';
+    var btn = el('night-toggle');
+    btn.hidden = !night;
+    btn.textContent = nightExpanded ? 'Hide the rest' : 'Show the rest';
+  }
+  el('night-toggle').addEventListener('click', function(){
+    nightExpanded = !nightExpanded;
+    applyNightMode();
+  });
+
   function tick(){
     if (state.status.asleep) el('status-timer').textContent = fmtDur(Date.now() - new Date(state.status.since).getTime());
+    applyNightMode();
     renderWakeCard();
     renderHomeSleepSub();
   }
@@ -1796,7 +1916,49 @@
     '</div>';
   }
 
+  // ---------- food history ----------
+  // "When did he last have egg?" is the question this answers, and the one
+  // worth answering fast when something has disagreed with him.
+  function foodHistory(){
+    var byFood = {};
+    state.solids.forEach(function(s){
+      var at = atDate(s);
+      (s.foods || []).forEach(function(f){
+        var key = String(f).toLowerCase();
+        var row = byFood[key] || (byFood[key] = { name: f, times: 0, first: at, last: at });
+        row.times++;
+        if (at > row.last) row.last = at;
+        if (at < row.first){ row.first = at; row.name = f; }
+      });
+    });
+    return Object.keys(byFood).map(function(k){ return byFood[k]; })
+      .sort(function(a, b){ return b.last - a.last; });
+  }
+
+  function renderFoodHistory(){
+    var panel = el('food-panel'), all = foodHistory();
+    if (!all.length){ panel.hidden = true; return; }
+    panel.hidden = false;
+    var term = String(el('food-search').value || '').trim().toLowerCase();
+    var shown = term ? all.filter(function(r){ return r.name.toLowerCase().indexOf(term) >= 0; }) : all;
+    el('food-count').textContent = plural(all.length, 'food');
+    el('food-list').innerHTML = shown.length
+      ? shown.map(function(r){
+          return '<div class="food-row">' +
+            '<span class="food-name">' + escapeHtml(r.name) + '</span>' +
+            '<span class="food-when">' + friendlyDate(dateKey(r.last)) + '</span>' +
+            '<span class="food-times">' + (r.times === 1 ? 'once' : r.times + '&times;') + '</span>' +
+          '</div>';
+        }).join('')
+      : '<p class="form-hint">Nothing matching &ldquo;' + escapeHtml(term) + '&rdquo; yet.</p>';
+    el('food-note').textContent = term
+      ? ''
+      : 'Most recent first. First tried ' + friendlyDate(dateKey(all.reduce(function(a, b){ return a.first < b.first ? a : b; }).first)) + '.';
+  }
+  el('food-search').addEventListener('input', renderFoodHistory);
+
   function renderSolids(){
+    renderFoodHistory();
     var groups = groupByDay(state.solids, function(s){ return atDate(s).getTime(); });
     renderDayGroups(
       el('solids-log'), groups, solidRowHtml,
@@ -1864,6 +2026,230 @@
   });
 
   // ======================================================
+  // MEDICINE
+  // ======================================================
+  // What was given and, when a gap between doses was entered, when the next
+  // one is due. The app counts the gap it was told and nothing more: how much
+  // and how often come from the label.
+  var medDraftGap = 240;
+
+  function medsByRecent(){
+    return state.meds.slice().sort(function(a, b){ return atDate(b) - atDate(a); });
+  }
+  // The last time each medicine was given, so picking a name can bring back
+  // the dose and the gap that went with it.
+  function lastOfEachMed(){
+    var seen = {};
+    medsByRecent().forEach(function(m){
+      var key = String(m.name || '').toLowerCase();
+      if (key && !seen[key]) seen[key] = m;
+    });
+    return seen;
+  }
+
+  function renderMedHelpers(){
+    var last = lastOfEachMed();
+    var names = Object.keys(last).map(function(k){ return last[k].name; });
+    el('med-suggestions').innerHTML = names.map(function(n){
+      return '<option value="' + escapeHtml(n) + '"></option>';
+    }).join('');
+    el('md-recent').innerHTML = names.slice(0, 5).map(function(n){
+      return '<button type="button" class="chip" data-med="' + escapeHtml(n) + '">' + escapeHtml(n) + '</button>';
+    }).join('');
+    var prior = last[String(el('md-name').value || '').toLowerCase()];
+    el('md-dose-chips').innerHTML = (prior && prior.dose)
+      ? '<button type="button" class="chip" data-dose="' + escapeHtml(prior.dose) + '">' + escapeHtml(prior.dose) + ' (last time)</button>'
+      : '';
+    Array.prototype.forEach.call(el('md-gap').querySelectorAll('.unit-btn'), function(btn){
+      btn.setAttribute('aria-pressed', Number(btn.dataset.gap) === medDraftGap ? 'true' : 'false');
+    });
+    el('md-gap-hint').textContent = medDraftGap
+      ? 'The next dose will show as due ' + fmtDur(medDraftGap * 60000) + ' after this one. Check the label for how much and how often.'
+      : 'No next dose will be worked out for this one.';
+  }
+
+  function resetMedForm(){
+    var now = new Date();
+    el('md-id').value = '';
+    el('md-date').value = dateKey(now);
+    el('md-time').value = timeValue(now);
+    el('md-name').value = '';
+    el('md-dose').value = '';
+    el('md-notes').value = '';
+    el('med-title').textContent = 'Log a dose';
+    el('md-submit').textContent = 'Add dose';
+    el('md-delete').hidden = true;
+    medDraftGap = 240;
+    renderMedHelpers();
+    hideError('md-error');
+    clearDraft('med-form');
+  }
+  function openMedForm(){
+    resetMedForm();
+    openOverlay('med-overlay');
+    snapshotForm('med-form');
+  }
+  function closeMedForm(){
+    closeOverlay('med-overlay');
+    resetMedForm();
+  }
+
+  function editMed(id, quiet){
+    var m = state.meds.find(function(x){ return x.id === id; });
+    if (!m) return false;
+    if (!quiet) goTo('meds');
+    el('md-id').value = m.id;
+    el('md-date').value = m.date;
+    el('md-time').value = m.time;
+    el('md-name').value = m.name || '';
+    el('md-dose').value = m.dose || '';
+    el('md-notes').value = m.notes || '';
+    el('med-title').textContent = 'Edit dose';
+    el('md-submit').textContent = 'Save';
+    el('md-delete').hidden = false;
+    medDraftGap = m.gapMin || 0;
+    renderMedHelpers();
+    hideError('md-error');
+    snapshotForm('med-form');
+    if (!quiet) openOverlay('med-overlay');
+    return true;
+  }
+
+  function medTitle(m){
+    var name = m.name || 'Medicine';
+    return m.dose ? name + ' ' + m.dose : name;
+  }
+
+  function medRowHtml(m){
+    var bits = [];
+    if (m.gapMin) bits.push('<span>Next from ' + fmtTime(new Date(atDate(m).getTime() + m.gapMin * 60000)) + '</span>');
+    var who = personChip(m);
+    if (who) bits.push(who);
+    return '<div class="entry-row">' +
+      '<div class="entry-main">' +
+        '<span class="entry-range">' + escapeHtml(medTitle(m)) + '</span>' +
+        (bits.length ? '<span class="entry-meta">' + bits.join('') + '</span>' : '') +
+        (m.notes ? '<span class="entry-notes">' + escapeHtml(m.notes) + '</span>' : '') +
+      '</div>' +
+      '<div class="entry-side">' +
+        '<span class="entry-dur">' + fmtTime(atDate(m)) + '</span>' +
+        '<button class="icon-btn writer-only" data-edit="meds" data-id="' + m.id + '" aria-label="Edit dose" type="button">' + ICON.pencil + '</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  // The last dose given, plus every medicine still inside the gap set for it.
+  // Kept per name so a Calpol dose does not hide that Nurofen is still due.
+  function medStatus(){
+    if (!state.meds.length) return null;
+    var last = lastOfEachMed(), now = new Date(), pending = [];
+    Object.keys(last).forEach(function(k){
+      var m = last[k];
+      if (!m.gapMin) return;
+      var due = new Date(atDate(m).getTime() + m.gapMin * 60000);
+      if (due > now) pending.push({ med: m, due: due });
+    });
+    pending.sort(function(a, b){ return a.due - b.due; });
+    return { latest: medsByRecent()[0], pending: pending };
+  }
+
+  function renderMedDue(){
+    var card = el('med-due-card'), st = medStatus();
+    if (!st){ card.hidden = true; return; }
+    card.hidden = false;
+    var now = new Date(), m = st.latest, at = atDate(m), stateEl = el('med-due-state');
+    el('med-due-last').textContent = medTitle(m);
+    el('med-due-ago').textContent = fmtTime(at) + ' · ' + fmtDur(Math.max(0, now - at)) + ' ago';
+    if (m.gapMin){
+      var due = new Date(at.getTime() + m.gapMin * 60000);
+      el('med-due-next').textContent = fmtTime(due);
+      if (due > now){ stateEl.textContent = 'in ' + fmtDur(due - now); stateEl.dataset.state = 'soon'; }
+      else { stateEl.textContent = 'due now'; stateEl.dataset.state = 'open'; }
+    } else {
+      el('med-due-next').textContent = '—';
+      stateEl.textContent = 'no gap set';
+      stateEl.dataset.state = 'none';
+    }
+    var others = st.pending.filter(function(p){ return p.med.id !== m.id; });
+    el('med-due-foot').textContent =
+      (others.length ? others.map(function(p){ return medTitle(p.med) + ' not until ' + fmtTime(p.due); }).join('. ') + '. ' : '') +
+      'Worked out from the gap entered with each dose. Check the label for how much and how often.';
+  }
+
+  function renderMedsLog(){
+    var groups = groupByDay(state.meds, function(m){ return atDate(m).getTime(); });
+    renderDayGroups(
+      el('meds-log'), groups, medRowHtml,
+      function(items){ return plural(items.length, 'dose'); },
+      '<span class="empty-icon">&#128137;</span><p>No medicine logged yet.<br>Anything given shows here for both of you.</p>'
+    );
+  }
+
+  function renderMeds(){
+    if (!FEATURES.medicine) return;
+    renderMedDue();
+    renderMedsLog();
+    var todayKey = dateKey(new Date());
+    var today = medsByRecent().filter(function(m){ return m.date === todayKey; });
+    el('home-meds-sub').textContent = today.length
+      ? medTitle(today[0]) + ' at ' + fmtTime(atDate(today[0])) +
+        (today.length > 1 ? ' · ' + plural(today.length, 'dose') + ' today' : '')
+      : 'Nothing given today';
+  }
+
+  el('md-name').addEventListener('input', renderMedHelpers);
+  el('md-gap').addEventListener('click', function(ev){
+    var btn = ev.target.closest('.unit-btn');
+    if (!btn) return;
+    medDraftGap = Number(btn.dataset.gap);
+    renderMedHelpers();
+    snapshotForm('med-form');
+  });
+
+  el('med-form').addEventListener('submit', async function(ev){
+    ev.preventDefault();
+    hideError('md-error');
+    var date = el('md-date').value, time = el('md-time').value;
+    var name = el('md-name').value.trim();
+    if (!date){ showError('md-error', 'Pick the date of this dose.', 'md-date'); return; }
+    if (!time){ showError('md-error', 'Enter the time of this dose.', 'md-time'); return; }
+    if (!name){ showError('md-error', 'Name the medicine.', 'md-name'); return; }
+
+    var med = {
+      id: el('md-id').value || uid(),
+      date: date,
+      time: time,
+      name: name,
+      dose: el('md-dose').value.trim(),
+      gapMin: medDraftGap || null,
+      notes: el('md-notes').value.trim()
+    };
+    showToast(el('md-id').value ? 'Dose updated' : medTitle(med) + ' logged at ' + fmtTime(atDate(med)));
+    closeMedForm();
+    await commit([{ type: 'upsert', collection: 'meds', record: med }]);
+  });
+
+  el('med-add-btn').addEventListener('click', function(){ if (!readOnly) openMedForm(); });
+  el('md-cancel').addEventListener('click', closeMedForm);
+  el('med-close').addEventListener('click', closeMedForm);
+  el('md-delete').addEventListener('click', function(){
+    var id = el('md-id').value;
+    if (!id){ closeMedForm(); return; }
+    var m = state.meds.find(function(x){ return x.id === id; });
+    askConfirm({
+      title: 'Delete this dose?',
+      text: (m ? medTitle(m) + ' at ' + fmtTime(atDate(m)) + ' on ' + friendlyDate(m.date) + '. ' : '') +
+        'It will be gone for both of you, and cannot be undone.',
+      confirmLabel: 'Delete',
+      onConfirm: async function(){
+        showToast('Dose deleted');
+        closeMedForm();
+        await commit([{ type: 'delete', collection: 'meds', id: id }]);
+      }
+    });
+  });
+
+  // ======================================================
   // HOME
   // ======================================================
   function allEvents(){
@@ -1877,6 +2263,11 @@
     state.solids.forEach(function(s){
       out.push({ kind: 'solids', id: s.id, date: s.date, at: atDate(s), src: s });
     });
+    if (FEATURES.medicine){
+      state.meds.forEach(function(m){
+        out.push({ kind: 'meds', id: m.id, date: m.date, at: atDate(m), src: m });
+      });
+    }
     return out;
   }
 
@@ -1888,6 +2279,10 @@
       notes = noteLines(ev.src);
     } else if (ev.kind === 'milk'){
       title = ev.src.amountMl ? ev.src.amountMl + ' ml milk' : 'Milk feed';
+      notes = ev.src.notes ? '<span class="entry-notes">' + escapeHtml(ev.src.notes) + '</span>' : '';
+    } else if (ev.kind === 'meds'){
+      title = escapeHtml(medTitle(ev.src));
+      if (ev.src.gapMin) sub = 'Next from ' + fmtTime(new Date(ev.at.getTime() + ev.src.gapMin * 60000));
       notes = ev.src.notes ? '<span class="entry-notes">' + escapeHtml(ev.src.notes) + '</span>' : '';
     } else {
       title = (ev.src.foods && ev.src.foods.length) ? escapeHtml(ev.src.foods.join(', ')) : 'Solids';
@@ -2059,6 +2454,7 @@
     else if (open === 'entry-overlay') closeForm();
     else if (open === 'milk-overlay') closeMilkForm();
     else if (open === 'solid-overlay') closeSolidForm();
+    else if (open === 'med-overlay') closeMedForm();
   });
   el('settings-form').addEventListener('submit', async function(ev){
     ev.preventDefault();
@@ -2159,6 +2555,17 @@
         renderPutDownHint();
       } else if (chip.hasAttribute('data-food')){
         addDraftFood(chip.getAttribute('data-food'));
+      } else if (chip.hasAttribute('data-med')){
+        el('md-name').value = chip.getAttribute('data-med');
+        // Bring back what went with it last time, so a 3am dose is two taps.
+        var prior = lastOfEachMed()[chip.getAttribute('data-med').toLowerCase()];
+        if (prior){
+          if (prior.dose) el('md-dose').value = prior.dose;
+          medDraftGap = prior.gapMin || 0;
+        }
+        renderMedHelpers();
+      } else if (chip.hasAttribute('data-dose')){
+        el('md-dose').value = chip.getAttribute('data-dose');
       }
       var chipForm = chip.closest('form');
       if (chipForm) snapshotForm(chipForm.id);
@@ -2204,8 +2611,10 @@
     started = true;
     el('auth-panel').hidden = true;
     el('app').hidden = false;
+    applyFeatureFlags();
     resetMilkForm();
     resetSolidForm();
+    if (FEATURES.medicine) resetMedForm();
     restoreView();
     renderAll();
     store.onChange(function(next){ state = next; renderAll(); });
