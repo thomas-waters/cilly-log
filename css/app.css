@@ -138,7 +138,8 @@
   #app[data-view="milk"] .view-milk,
   #app[data-view="meds"] .view-meds,
   #app[data-view="solids"] .view-solids,
-  #app[data-view="summary"] .view-summary{ display:flex; }
+  #app[data-view="summary"] .view-summary,
+  #app[data-view="report"] .view-report{ display:flex; }
   body[data-view="sleep"]{ background:var(--bg-sleep); }
   body[data-view="milk"]{ background:var(--bg-milk); }
   body[data-view="solids"]{ background:var(--bg-solids); }
@@ -252,6 +253,19 @@
     min-width:34px; text-align:right;
   }
   #food-search{ margin-bottom:4px; }
+  .report-title{ margin:0 0 2px; }
+  .report-range{ margin:0 0 12px; font-size:0.8rem; color:var(--ink-soft); }
+  .report-table{ width:100%; border-collapse:collapse; font-size:0.85rem; }
+  .report-table th, .report-table td{
+    border:1px solid var(--border);
+    padding:8px 10px;
+    text-align:left;
+    vertical-align:top;
+    line-height:1.45;
+  }
+  .report-table thead th{ background:var(--surface-2); font-size:0.75rem; text-transform:uppercase; letter-spacing:.04em; }
+  .report-when{ white-space:nowrap; width:1%; font-variant-numeric:tabular-nums; }
+
   .chips-label{ font-size:0.72rem; font-weight:600; color:var(--ink-soft); align-self:center; margin-right:2px; }
   .form-hint{ margin:0; font-size:0.78rem; color:var(--ink-soft); line-height:1.4; }
 
@@ -829,10 +843,13 @@
     .page{ max-width:none; padding-block:0; }
     .head-btn, .nav-list, .no-print, .toast, .notice, .foot, .overlay{ display:none !important; }
     #app .view{ display:none !important; }
-    #app .view-summary{ display:flex !important; }
+    #app[data-view="summary"] .view-summary,
+    #app[data-view="report"] .view-report{ display:flex !important; }
     #auth-panel{ display:none !important; }
     .print-only{ display:block; font-size:0.85rem; color:var(--ink-soft); margin:0; }
     .panel, .summary-tile{ box-shadow:none; break-inside:avoid; }
     .summary-grid{ grid-template-columns:1fr 1fr; }
     .day-table{ font-size:0.78rem; }
+    .report-table{ font-size:0.75rem; }
+    .report-table tr{ break-inside:avoid; }
   }

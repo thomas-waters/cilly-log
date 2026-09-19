@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#5B54D6">
   <title>Cilly Log</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
-  <link rel="stylesheet" href="css/app.css?v=20260919-1426">
+  <link rel="stylesheet" href="css/app.css?v=20260919-1659">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -661,6 +661,37 @@
     <section class="log" id="meds-log"></section>
   </section>
 
+  <!-- ================= SLEEP CONSULTANT LOG ================= -->
+  <section class="view view-report" aria-label="Sleep consultant log">
+    <header class="page-head no-print">
+      <button class="head-btn" type="button" data-nav="summary" aria-label="Back to summary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <div class="head-text">
+        <h1>Consultant log</h1>
+        <p class="tagline">Written out, in order, ready to send.</p>
+      </div>
+    </header>
+
+    <div class="field no-print">
+      <span class="field-label" id="report-range-label">Days</span>
+      <div class="unit-toggle basis-toggle" id="report-range" role="group" aria-labelledby="report-range-label">
+        <button type="button" class="unit-btn" data-days="3" aria-pressed="true">3</button>
+        <button type="button" class="unit-btn" data-days="7" aria-pressed="false">7</button>
+        <button type="button" class="unit-btn" data-days="14" aria-pressed="false">14</button>
+      </div>
+      <p class="form-hint" id="report-hint"></p>
+    </div>
+
+    <div class="form-actions no-print">
+      <button type="button" class="btn ghost" id="report-copy">Copy</button>
+      <button type="button" class="btn ghost" id="report-print">Print or PDF</button>
+      <button type="button" class="btn primary" id="report-docx">Save as Word</button>
+    </div>
+
+    <div id="report-body"></div>
+  </section>
+
   <!-- ================= SUMMARY ================= -->
   <section class="view view-summary" aria-label="Summary">
     <header class="page-head">
@@ -732,6 +763,10 @@
         <button type="button" class="btn ghost" id="print-btn">Print summary</button>
         <button type="button" class="btn primary" id="csv-btn">Download spreadsheet</button>
       </div>
+      <p class="form-hint">A sleep consultant usually wants it written out rather than as a spreadsheet: a line per event, in order, saying what happened and how he was.</p>
+      <div class="form-actions">
+        <button type="button" class="btn ghost" id="report-btn">Sleep consultant log</button>
+      </div>
     </section>
   </section>
 
@@ -771,10 +806,11 @@
 
 <div class="toast" id="toast" hidden></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/config.js?v=20260919-1426"></script>
-<script src="js/store.js?v=20260919-1426"></script>
-<script src="js/changelog.js?v=20260919-1426"></script>
-<script src="js/sleep-model.js?v=20260919-1426"></script>
-<script src="js/app.js?v=20260919-1426"></script>
+<script src="js/config.js?v=20260919-1659"></script>
+<script src="js/store.js?v=20260919-1659"></script>
+<script src="js/docx.js?v=20260919-1659"></script>
+<script src="js/changelog.js?v=20260919-1659"></script>
+<script src="js/sleep-model.js?v=20260919-1659"></script>
+<script src="js/app.js?v=20260919-1659"></script>
 </body>
 </html>
