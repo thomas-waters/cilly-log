@@ -471,10 +471,14 @@
   }
 
   function goTo(view){
+    // Arriving at a page starts at the top, but opening a form on the page you
+    // are already on is not arriving anywhere: editing an entry half way down
+    // the log should leave the log where it was.
+    var moved = el('app').dataset.view !== view;
     setView(view);
     ssSet(VIEW_KEY, view);
     hideChartTooltip();
-    window.scrollTo({ top: 0 });
+    if (moved) window.scrollTo({ top: 0 });
   }
 
   function restoreView(){
