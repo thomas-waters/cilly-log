@@ -164,6 +164,13 @@
   .view-solids{ --accent:var(--solid); --accent-soft:var(--solid-soft); --accent-ink:var(--solid-ink); }
   .view-meds{ --accent:var(--med); --accent-soft:var(--med-soft); --accent-ink:var(--med-ink); }
 
+  /* Waiting to sync is not a warning: nothing is lost and there is nothing to
+     do about it, so it says so quietly. */
+  .notice-wait{
+    background:var(--accent-soft) !important;
+    border-color:var(--accent) !important;
+    color:var(--ink-soft) !important;
+  }
   .notice{
     background:var(--warn-soft);
     border:1px solid var(--warn);

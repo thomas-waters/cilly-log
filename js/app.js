@@ -3208,11 +3208,95 @@
   // ======================================================
   // PERSIST
   // ======================================================
+  // ---------- the outbox ----------
+  // A save that fails used to say so and then vanish: the entry lived in
+  // memory until the next reload took it. In a nursery corridor at 3am that is
+  // the log quietly losing a night. Failed ops now wait on the device instead,
+  // are re-applied over whatever the database sends back so they stay on
+  // screen, and go up the moment anything works again.
+  var OUTBOX_KEY = 'cilly.outbox';
+  function outboxRead(){
+    try {
+      var raw = window.localStorage.getItem(OUTBOX_KEY);
+      var list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list : [];
+    } catch (e) { return []; }
+  }
+  function outboxWrite(list){
+    try { window.localStorage.setItem(OUTBOX_KEY, JSON.stringify(list)); } catch (e) {}
+    renderOutbox();
+  }
+  // What an op is about, so a later one can replace an earlier one for the
+  // same thing rather than both being replayed in turn.
+  function opKey(op){
+    if (op.type === 'upsert') return 'upsert:' + op.collection + ':' + op.record.id;
+    if (op.type === 'delete') return 'delete:' + op.collection + ':' + op.id;
+    return op.type; // status, settings and prefs are each one whole row
+  }
+  function outboxAdd(ops){
+    var list = outboxRead();
+    ops.forEach(function(op){
+      var key = opKey(op);
+      // A delete cancels a queued upsert of the same record, and the newest
+      // write of a whole row is the only one worth sending.
+      list = list.filter(function(q){
+        if (q.key === key) return false;
+        if (op.type === 'delete' && q.key === 'upsert:' + op.collection + ':' + op.id) return false;
+        return true;
+      });
+      list.push({ key: key, op: op, at: Date.now() });
+    });
+    outboxWrite(list);
+  }
+  // Ops waiting to be sent are re-applied on top of server state, so an entry
+  // logged offline stays visible instead of disappearing on the next reload or
+  // when the other phone changes something.
+  function applyOutbox(){
+    var list = outboxRead();
+    if (list.length) applyOps(list.map(function(q){ return q.op; }));
+  }
+  var flushing = false;
+  async function flushOutbox(){
+    if (flushing) return;
+    var list = outboxRead();
+    if (!list.length) return;
+    flushing = true;
+    try {
+      while (list.length){
+        // One at a time and in order: a batch that fails half way through
+        // would otherwise be sent twice.
+        var head = list[0];
+        await store.apply([head.op], state);
+        list = outboxRead().filter(function(q){ return !(q.key === head.key && q.at === head.at); });
+        outboxWrite(list);
+      }
+      showToast('Everything waiting has been saved.');
+    } catch (e) {
+      // Still no connection, or the database said no. Leave the rest queued.
+    }
+    flushing = false;
+  }
+  function renderOutbox(){
+    var n = outboxRead().length;
+    var note = el('outbox-note');
+    note.hidden = !n;
+    note.textContent = n === 1
+      ? 'One entry is saved on this phone and waiting to sync.'
+      : n + ' entries are saved on this phone and waiting to sync.';
+  }
+  window.addEventListener('online', flushOutbox);
+  document.addEventListener('visibilitychange', function(){
+    if (!document.hidden) flushOutbox();
+  });
+
   async function persist(ops){
     try {
       await store.apply(ops, state);
+      // Something worked, so anything held back is worth another go.
+      if (outboxRead().length) flushOutbox();
     } catch (e) {
-      showToast('Couldn\u2019t save that. Check your connection and try again.');
+      outboxAdd(ops);
+      showToast('No connection. Saved on this phone and it will sync itself.');
     }
   }
   // ======================================================
@@ -3311,10 +3395,15 @@
     if (FEATURES.medicine) resetMedForm();
     restoreView();
     renderAll();
-    store.onChange(function(next){ state = next; renderAll(); });
+    // Anything still waiting to go up is re-applied over what arrives, so the
+    // app shows what was logged rather than what the database knows so far.
+    store.onChange(function(next){ state = next; applyOutbox(); renderAll(); });
     store.load().then(function(loaded){
       state = loaded;
+      applyOutbox();
       renderAll();
+      renderOutbox();
+      flushOutbox();
       restoreDrafts();
       if (store.kind === 'local') showNotice('Saving on this device only for now. Shared sync between phones comes once the database is connected.');
     }).catch(function(){
