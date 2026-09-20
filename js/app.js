@@ -420,7 +420,7 @@
   // Each one lives inside its own view, so only the current view's can show.
   // The confirm is first: it opens over the others, so Escape should reach it
   // before the form underneath.
-  var OVERLAYS = ['confirm-overlay', 'changelog-overlay', 'settings-overlay', 'marker-overlay', 'day-overlay', 'entry-overlay', 'milk-overlay', 'solid-overlay', 'med-overlay'];
+  var OVERLAYS = ['confirm-overlay', 'changelog-overlay', 'settings-overlay', 'sources-overlay', 'marker-overlay', 'day-overlay', 'entry-overlay', 'milk-overlay', 'solid-overlay', 'med-overlay'];
   function openOverlay(id){
     el(id).hidden = false;
   }
@@ -948,9 +948,11 @@
       row('Naps a day', averageOver(naps), band.naps[0], band.naps[1], count) +
       '</tbody>';
 
+    // "Public health nurse" rather than health visitor: this family is in
+    // Ireland, and so are the figures above them.
     el('norms-note').textContent = (band.note ? band.note + ' ' : '') +
-      MODEL.sources + ' Every baby is different, and a week outside a range is not a problem by itself ' +
-      '— it is a question for your health visitor or GP, not a verdict.';
+      MODEL.sources + ' Tap the info button for all of them. Every baby is different, and a week outside a ' +
+      'range is not a problem by itself — it is a question for your public health nurse or GP, not a verdict.';
   }
 
   function dayTotals(key){
@@ -1040,6 +1042,31 @@
         ? 'Averages cover all ' + summaryDays + ' days.'
         : 'Averages count only days with something logged (' + plural(loggedDays, 'day') + ' of ' + summaryDays + '). Each column counts its own days.');
   }
+
+  // ---------- where the figures come from ----------
+  // The app judges his days against published ranges, so it has to be able to
+  // show whose ranges they are. The list lives with the model in
+  // js/sleep-model.js, and opens from the info button beside anything that
+  // uses it. Links open in the browser rather than inside the app.
+  function renderSources(){
+    var list = (MODEL && MODEL.sourceList) || [];
+    el('sources-intro').textContent = 'The HSE publishes what a child needs at each age, so those are the figures here. ' +
+      'The rest fills in what it does not cover.';
+    el('sources-list').innerHTML = list.map(function(s){
+      var head = s.url
+        ? '<a class="source-name" href="' + escapeHtml(s.url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(s.name) + '</a>'
+        : '<span class="source-name">' + escapeHtml(s.name) + '</span>';
+      return '<div class="source">' + head + '<p>' + escapeHtml(s.what) + '</p></div>';
+    }).join('');
+  }
+  function openSources(){
+    renderSources();
+    openOverlay('sources-overlay');
+    el('sources-close').focus();
+  }
+  function closeSources(){ closeOverlay('sources-overlay'); }
+  el('sources-close').addEventListener('click', closeSources);
+  el('sources-overlay').addEventListener('click', function(ev){ if (ev.target === el('sources-overlay')) closeSources(); });
 
   // ======================================================
   // WHAT WAS GOING ON
@@ -3387,6 +3414,7 @@
     if (open === 'confirm-overlay') closeConfirm();
     else if (open === 'changelog-overlay') closeChangelog();
     else if (open === 'settings-overlay') closeSettings();
+    else if (open === 'sources-overlay') closeSources();
     else if (open === 'marker-overlay') closeMarkerForm();
     else if (open === 'day-overlay') closeDay();
     else if (open === 'entry-overlay') closeForm();
@@ -3556,6 +3584,8 @@
 
     var nav = target.closest('[data-nav]');
     if (nav){ goTo(nav.getAttribute('data-nav')); return; }
+
+    if (target.closest('[data-sources]')){ openSources(); return; }
 
     var refresh = target.closest('[data-refresh]');
     if (refresh){

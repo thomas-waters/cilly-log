@@ -68,6 +68,18 @@ It holds real family records: treat the live data with care.
   Each overlay lives inside its own view, so only the current view's can be on
   screen. Anything new that records something should follow that, not put a
   form inline on the page.
+- **The family is in Ireland, so the HSE comes first.** `js/sleep-model.js`
+  takes night sleep and nap figures from the HSE's per-age pages, 24-hour
+  totals from the AASM consensus (which the HSE does not state, and which does
+  not cover under-4-months), and wake windows from parenting charts because no
+  health service publishes them. Where sources disagree, the HSE wins for the
+  ages it covers: those are the figures a public health nurse works from. Keep
+  the bands wide enough to contain what the published guidance calls usual —
+  narrowing them would flag a baby the HSE would call ordinary. Every source is
+  listed with a link in `sourceList`, shown by the info buttons beside "Usual
+  for his age" and the month grid, and anything without a link is convention
+  rather than guidance and says so. Say "public health nurse", not "health
+  visitor".
 - Night sleep vs naps, the sleep guide and time-to-settle are all computed
   from settings stored in the database plus `js/sleep-model.js`, not
   hard-coded in the views. `isNight` decides it by where a sleep happened, not

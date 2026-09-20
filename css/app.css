@@ -782,6 +782,23 @@
   .summary-delta[data-dir="down"]{ color:var(--warn); }
 
   /* ---------- month at a glance ---------- */
+  /* The info button beside anything that judges a day against a published
+     range, and the list it opens. */
+  .head-aside{ display:flex; align-items:center; gap:6px; }
+  .info-btn{
+    flex:none; width:22px; height:22px; padding:0;
+    display:flex; align-items:center; justify-content:center;
+    background:none; border:none; border-radius:50%;
+    color:var(--ink-soft); cursor:pointer;
+  }
+  .info-btn svg{ width:16px; height:16px; }
+  .info-btn:hover{ color:var(--accent); }
+  .info-btn:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+  .source-list{ display:flex; flex-direction:column; gap:14px; }
+  .source p{ margin:3px 0 0; font-size:0.8rem; line-height:1.5; color:var(--ink-soft); }
+  .source-name{ font-size:0.86rem; font-weight:600; color:var(--ink); }
+  a.source-name{ color:var(--accent); text-decoration:underline; text-underline-offset:2px; }
+
   .month-head{ flex-wrap:wrap; }
   /* Its own row under the heading: a month name and two arrows do not fit
      beside a title on a phone, and arrows at the edges are easier to hit. */

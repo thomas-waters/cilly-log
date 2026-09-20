@@ -27,8 +27,10 @@ window.CILLY_CHANGELOG = [
   {
     version: '1.16.0',
     date: '2026-09-20',
-    title: 'Nothing lost, the shape of his days, and what was going on',
+    title: 'Nothing lost, the shape of his days, and Irish figures',
     notes: [
+      'The age ranges now follow the HSE, so the app judges him the way a public health nurse here would: 10 to 12 hours a night and two naps of 1 to 2 hours at his age, rather than the narrower figures from parenting charts. Some days that read as short before will read as ordinary now, and his naps stop being flagged as long.',
+      'An info button beside "Usual for his age" and the month grid opens every source behind the figures, with links: the HSE pages, the American Academy of Sleep Medicine consensus on 24-hour totals, the review behind treating night waking as normal, and the NHS. It also says plainly that wake windows come from parenting charts rather than any health service.',
       'A save that cannot reach the database no longer disappears. It waits on the phone, stays on screen, and goes up on the next open or as soon as the connection is back. A quiet line at the top says how many are waiting.',
       'Insights → Overview has The shape of his days: a row a day drawn against the clock, so you can see bedtime drifting, a night breaking in two, or a third nap creeping back — things a column of totals cannot show. Tap a row to open that day.',
       'Insights → Calendar has What was going on: mark teething, a cold, a week away, first days at nursery. Marked days carry a dot on the calendar, show in the day, and go into the consultant log as their own line, which is the first thing she asks about a rough week.'
