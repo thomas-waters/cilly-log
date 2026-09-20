@@ -34,6 +34,11 @@
       feeds: [],
       solids: [],
       meds: [],
+      // What was going on: teething, a cold, a week away. Few enough to live
+      // in one app_state row rather than a table of their own, which keeps
+      // them working on any database without a migration. If they ever grow
+      // past a handful a month, give them a table.
+      markers: [],
       // email -> display name ("Dad", "Mum"), loaded from the database so no
       // personal addresses live in this repo.
       people: {},
@@ -51,6 +56,7 @@
     s.feeds = Array.isArray(s.feeds) ? s.feeds : [];
     s.solids = Array.isArray(s.solids) ? s.solids : [];
     s.meds = Array.isArray(s.meds) ? s.meds : [];
+    s.markers = Array.isArray(s.markers) ? s.markers : [];
     s.people = s.people && typeof s.people === 'object' ? s.people : {};
     s.me = typeof s.me === 'string' ? s.me : '';
     return s;
@@ -180,6 +186,7 @@
       results[3].data.forEach(function(row){
         if (row.key === 'status') state.status = Object.assign(state.status, row.value || {});
         if (row.key === 'settings') state.settings = Object.assign(state.settings, row.value || {});
+        if (row.key === 'markers' && Array.isArray(row.value)) state.markers = row.value;
         if (me && row.key === PREFS_PREFIX + me) state.prefs = Object.assign(state.prefs, row.value || {});
       });
       // Names are a nicety: if the table has no display names yet, entries
@@ -218,6 +225,7 @@
           res = await client.from('app_state').upsert({ key: 'status', value: op.status });
         }
         else if (op.type === 'settings') res = await client.from('app_state').upsert({ key: 'settings', value: op.settings });
+        else if (op.type === 'markers') res = await client.from('app_state').upsert({ key: 'markers', value: op.markers });
         else if (op.type === 'prefs'){
           // Nothing to write to if we do not know who this is; the choice
           // still applies on this device from its own cache.

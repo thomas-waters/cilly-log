@@ -420,7 +420,7 @@
   // Each one lives inside its own view, so only the current view's can show.
   // The confirm is first: it opens over the others, so Escape should reach it
   // before the form underneath.
-  var OVERLAYS = ['confirm-overlay', 'changelog-overlay', 'settings-overlay', 'day-overlay', 'entry-overlay', 'milk-overlay', 'solid-overlay', 'med-overlay'];
+  var OVERLAYS = ['confirm-overlay', 'changelog-overlay', 'settings-overlay', 'marker-overlay', 'day-overlay', 'entry-overlay', 'milk-overlay', 'solid-overlay', 'med-overlay'];
   function openOverlay(id){
     el(id).hidden = false;
   }
@@ -559,6 +559,9 @@
     else if (kind === 'milk'){ editMilk(id, false); }
     else if (kind === 'solids'){ editSolid(id, false); }
     else if (kind === 'meds'){ editMed(id, false); }
+    // Markers are edited where they are listed, on the Calendar tab, so this
+    // one does not move the page first.
+    else if (kind === 'marker'){ openMarkerForm(id); }
   }
 
   // ---------- drafts: what someone is mid-typing survives a reload ----------
@@ -676,6 +679,8 @@
         state.settings = op.settings;
       } else if (op.type === 'prefs'){
         state.prefs = op.prefs;
+      } else if (op.type === 'markers'){
+        state.markers = op.markers;
       }
     });
   }
@@ -856,6 +861,7 @@
     renderDayTable();
     renderNorms();
     renderMonth();
+    renderMarkers();
     el('print-heading').textContent = 'Cilly Log — ' + summaryDays + ' days to ' +
       new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -1034,6 +1040,136 @@
         ? 'Averages cover all ' + summaryDays + ' days.'
         : 'Averages count only days with something logged (' + plural(loggedDays, 'day') + ' of ' + summaryDays + '). Each column counts its own days.');
   }
+
+  // ======================================================
+  // WHAT WAS GOING ON
+  // ======================================================
+  // Teething, a cold, a week away, the first days at nursery. Without them a
+  // rough fortnight in the figures looks like a mystery when you knew exactly
+  // what it was at the time - and you cannot add them afterwards, because by
+  // then you have forgotten. They sit on the calendar, in the day, and in the
+  // consultant log, which is the question she asks first.
+  var MARKER_KINDS = [
+    { id: 'teething', label: 'Teething' },
+    { id: 'ill', label: 'Unwell' },
+    { id: 'travel', label: 'Away from home' },
+    { id: 'nursery', label: 'Nursery' },
+    { id: 'jabs', label: 'Vaccinations' },
+    { id: 'other', label: 'Something else' }
+  ];
+  function markerLabel(kind){
+    for (var i = 0; i < MARKER_KINDS.length; i++){ if (MARKER_KINDS[i].id === kind) return MARKER_KINDS[i].label; }
+    return 'Something else';
+  }
+  // Marked days are stored as a first and last date, so a week away is one
+  // entry rather than seven.
+  function markersOn(key){
+    return (state.markers || []).filter(function(m){
+      return key >= m.from && key <= (m.to || m.from);
+    });
+  }
+  function nextDayKey(key){
+    var parts = key.split('-').map(Number);
+    var d = new Date(parts[0], parts[1] - 1, parts[2] + 1);
+    return dateKey(d);
+  }
+  function markerSpan(m){
+    var to = m.to || m.from;
+    return m.from === to ? friendlyDate(m.from) : friendlyDate(m.from) + ' – ' + friendlyDate(to);
+  }
+  function markerText(m){
+    return markerLabel(m.kind) + (m.note ? ' — ' + m.note : '');
+  }
+  function sortedMarkers(){
+    return (state.markers || []).slice().sort(function(a, b){ return a.from < b.from ? 1 : a.from > b.from ? -1 : 0; });
+  }
+
+  function renderMarkers(){
+    var list = sortedMarkers();
+    el('marker-list').innerHTML = list.length
+      ? list.map(function(m){
+          return '<div class="entry-row">' +
+            '<div class="entry-main">' +
+              '<span class="entry-range">' + escapeHtml(markerLabel(m.kind)) + '</span>' +
+              '<span class="entry-meta"><span class="meta-tag">' + escapeHtml(markerSpan(m)) + '</span></span>' +
+              (m.note ? '<span class="entry-notes">' + escapeHtml(m.note) + '</span>' : '') +
+            '</div>' +
+            '<div class="entry-side">' +
+              '<button class="icon-btn writer-only" data-edit="marker" data-id="' + m.id + '" aria-label="Edit ' + escapeHtml(markerLabel(m.kind)) + '" type="button">' + ICON.pencil + '</button>' +
+            '</div>' +
+          '</div>';
+        }).join('')
+      : '<p class="form-hint">Nothing marked yet. Add teething, a cold or a week away and it will show on the calendar and in the consultant log.</p>';
+  }
+
+  function resetMarkerForm(){
+    el('mk-id').value = '';
+    el('mk-kind').value = 'teething';
+    el('mk-from').value = dateKey(new Date());
+    el('mk-to').value = '';
+    el('mk-note').value = '';
+    el('marker-title').textContent = 'What was going on';
+    el('mk-delete').hidden = true;
+    hideError('mk-error');
+  }
+  function openMarkerForm(id){
+    if (readOnly) return;
+    resetMarkerForm();
+    if (id){
+      var m = (state.markers || []).filter(function(x){ return x.id === id; })[0];
+      if (m){
+        el('mk-id').value = m.id;
+        el('mk-kind').value = m.kind;
+        el('mk-from').value = m.from;
+        el('mk-to').value = m.to && m.to !== m.from ? m.to : '';
+        el('mk-note').value = m.note || '';
+        el('marker-title').textContent = 'Edit ' + markerLabel(m.kind).toLowerCase();
+        el('mk-delete').hidden = false;
+      }
+    }
+    openOverlay('marker-overlay');
+    el('mk-kind').focus();
+  }
+  function closeMarkerForm(){ closeOverlay('marker-overlay'); }
+  el('marker-add').addEventListener('click', function(){ openMarkerForm(''); });
+  el('marker-close').addEventListener('click', closeMarkerForm);
+  el('mk-cancel').addEventListener('click', closeMarkerForm);
+  el('marker-overlay').addEventListener('click', function(ev){ if (ev.target === el('marker-overlay')) closeMarkerForm(); });
+
+  el('marker-form').addEventListener('submit', async function(ev){
+    ev.preventDefault();
+    hideError('mk-error');
+    var from = el('mk-from').value, to = el('mk-to').value;
+    if (!from){ showError('mk-error', 'Pick the day it started.', 'mk-from'); return; }
+    if (to && to < from){ showError('mk-error', 'The last day can’t be before the first.', 'mk-to'); return; }
+    var marker = {
+      id: el('mk-id').value || uid(),
+      kind: el('mk-kind').value,
+      from: from,
+      to: to || from,
+      note: el('mk-note').value.trim(),
+      createdBy: state.me || ''
+    };
+    var rest = (state.markers || []).filter(function(m){ return m.id !== marker.id; });
+    showToast(el('mk-id').value ? 'Updated' : markerLabel(marker.kind) + ' marked');
+    closeMarkerForm();
+    await commit([{ type: 'markers', markers: rest.concat([marker]) }]);
+  });
+
+  el('mk-delete').addEventListener('click', function(){
+    var id = el('mk-id').value;
+    var m = (state.markers || []).filter(function(x){ return x.id === id; })[0];
+    if (!m) return;
+    askConfirm({
+      title: 'Delete this?',
+      text: markerText(m) + ', ' + markerSpan(m) + '. This cannot be undone.',
+      onConfirm: async function(){
+        closeMarkerForm();
+        showToast('Deleted');
+        await commit([{ type: 'markers', markers: (state.markers || []).filter(function(x){ return x.id !== id; }) }]);
+      }
+    });
+  });
 
   // ======================================================
   // THE SHAPE OF HIS DAYS
@@ -1252,11 +1388,16 @@
       var label = longDayName(day.key) + (day.ms ? ', ' + fmtDur(day.ms) + ' ' + metric.label : '') +
         (MONTH_WORDS[day.state] ? ', ' + MONTH_WORDS[day.state] : '');
       var disabled = day.state === 'future' || day.state === 'before';
+      // A marked day carries a dot, so a run of short nights and the week he
+      // was teething are visible in the same glance.
+      var marks = markersOn(day.key);
+      if (marks.length) label += ', ' + marks.map(markerText).join(', ');
       cells += '<button type="button" class="month-cell" data-day="' + day.key + '"' +
         ' data-state="' + day.state + '"' + (day.key === todayKey ? ' data-today="true"' : '') +
         (disabled ? ' disabled' : '') + ' aria-label="' + escapeHtml(label) + '">' +
         '<span class="month-date">' + d + '</span>' +
         '<span class="month-figure">' + figure + '</span>' +
+        (marks.length ? '<span class="month-mark" aria-hidden="true"></span>' : '') +
       '</button>';
     }
     el('month-grid').innerHTML = cells;
@@ -1387,6 +1528,12 @@
       verdict.textContent = fmtDur(day.ms) + ' of ' + metric.label + ' logged.';
       verdict.dataset.state = 'plain';
     }
+
+    var marks = markersOn(key);
+    el('day-markers').innerHTML = marks.map(function(m){
+      return '<span class="day-mark">' + escapeHtml(markerText(m)) + '</span>';
+    }).join('');
+    el('day-markers').hidden = !marks.length;
 
     var sleeps = state.entries.filter(function(e){ return sleepDayKey(e) === key; })
       .sort(function(a, b){ return entryStart(a) - entryStart(b); });
@@ -1568,6 +1715,17 @@
         if (at >= cutoff) out.push({ at: at, kind: 'meds', when: fmtTime(at), text: reportLines(m, 'meds') });
       });
     }
+    // Anything marked about a day opens that day. Still one event a row and
+    // two columns, but with no clock: "he was teething" is a day, not a
+    // moment, and it is the first thing the consultant asks about a bad week.
+    (state.markers || []).forEach(function(m){
+      var to = m.to || m.from;
+      for (var key = m.from; key <= to; key = nextDayKey(key)){
+        var at = new Date(key + 'T00:00:00');
+        if (at < cutoff || at > new Date()) continue;
+        out.push({ at: at, kind: 'marker', when: 'All day', text: markerText(m) });
+      }
+    });
     return out.sort(function(a, b){ return a.at - b.at; });
   }
 
@@ -3229,6 +3387,7 @@
     if (open === 'confirm-overlay') closeConfirm();
     else if (open === 'changelog-overlay') closeChangelog();
     else if (open === 'settings-overlay') closeSettings();
+    else if (open === 'marker-overlay') closeMarkerForm();
     else if (open === 'day-overlay') closeDay();
     else if (open === 'entry-overlay') closeForm();
     else if (open === 'milk-overlay') closeMilkForm();

@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#5B54D6">
   <title>Cilly Log</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
-  <link rel="stylesheet" href="css/app.css?v=20260920-2218">
+  <link rel="stylesheet" href="css/app.css?v=20260920-2229">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -853,6 +853,17 @@
       </div>
       <p class="form-hint" id="month-note"></p>
     </section>
+
+    <!-- Context for the figures. A rough fortnight is a mystery a month later
+         unless somebody wrote down that he was teething. -->
+    <section class="panel" id="marker-panel" aria-label="What was going on">
+      <div class="panel-head">
+        <h2>What was going on</h2>
+        <button type="button" class="btn ghost btn-small writer-only" id="marker-add">Add</button>
+      </div>
+      <div class="day-sleeps" id="marker-list"></div>
+      <p class="form-hint">Marked days carry a dot on the calendar, show in the day, and go into the consultant log.</p>
+    </section>
     </div>
 
     <div class="tab-panel" id="panel-share" role="tabpanel" aria-labelledby="tab-share" hidden>
@@ -880,6 +891,52 @@
     </section>
     </div>
 
+    <div class="overlay no-print writer-only" id="marker-overlay" hidden>
+      <section class="panel overlay-panel" role="dialog" aria-modal="true" aria-labelledby="marker-title">
+        <div class="overlay-head">
+          <h2 id="marker-title">What was going on</h2>
+          <button type="button" class="head-btn" id="marker-close" aria-label="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
+        <form id="marker-form">
+          <input type="hidden" id="mk-id">
+          <div class="field">
+            <label for="mk-kind">What</label>
+            <select id="mk-kind">
+              <option value="teething">Teething</option>
+              <option value="ill">Unwell</option>
+              <option value="travel">Away from home</option>
+              <option value="nursery">Nursery</option>
+              <option value="jabs">Vaccinations</option>
+              <option value="other">Something else</option>
+            </select>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label for="mk-from">First day</label>
+              <input type="date" id="mk-from">
+            </div>
+            <div class="field">
+              <label for="mk-to">Last day</label>
+              <input type="date" id="mk-to">
+            </div>
+          </div>
+          <p class="form-hint">Leave the last day empty if it was just the one. You can come back and extend it.</p>
+          <div class="field">
+            <label for="mk-note">Anything worth remembering</label>
+            <input type="text" id="mk-note" placeholder="Two bottom teeth, off his food" maxlength="140">
+          </div>
+          <p class="form-error" id="mk-error" hidden></p>
+          <div class="form-actions">
+            <button type="button" class="btn danger" id="mk-delete" hidden>Delete</button>
+            <button type="button" class="btn ghost" id="mk-cancel">Cancel</button>
+            <button type="submit" class="btn primary">Save</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
     <!-- Opened by tapping a day in the month grid. Read-only: editing happens
          in the log, which the button at the bottom goes to. -->
     <div class="overlay no-print" id="day-overlay" hidden>
@@ -891,6 +948,7 @@
           </button>
         </div>
         <p class="day-verdict" id="day-verdict"></p>
+        <div class="day-marks" id="day-markers" hidden></div>
         <div class="table-wrap">
           <table class="day-table" id="day-detail-table"></table>
         </div>
@@ -939,11 +997,11 @@
 
 <div class="toast" id="toast" hidden></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/config.js?v=20260920-2218"></script>
-<script src="js/store.js?v=20260920-2218"></script>
-<script src="js/docx.js?v=20260920-2218"></script>
-<script src="js/changelog.js?v=20260920-2218"></script>
-<script src="js/sleep-model.js?v=20260920-2218"></script>
-<script src="js/app.js?v=20260920-2218"></script>
+<script src="js/config.js?v=20260920-2229"></script>
+<script src="js/store.js?v=20260920-2229"></script>
+<script src="js/docx.js?v=20260920-2229"></script>
+<script src="js/changelog.js?v=20260920-2229"></script>
+<script src="js/sleep-model.js?v=20260920-2229"></script>
+<script src="js/app.js?v=20260920-2229"></script>
 </body>
 </html>

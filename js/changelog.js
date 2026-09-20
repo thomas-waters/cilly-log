@@ -25,6 +25,16 @@
  */
 window.CILLY_CHANGELOG = [
   {
+    version: '1.16.0',
+    date: '2026-09-20',
+    title: 'Nothing lost, the shape of his days, and what was going on',
+    notes: [
+      'A save that cannot reach the database no longer disappears. It waits on the phone, stays on screen, and goes up on the next open or as soon as the connection is back. A quiet line at the top says how many are waiting.',
+      'Insights → Overview has The shape of his days: a row a day drawn against the clock, so you can see bedtime drifting, a night breaking in two, or a third nap creeping back — things a column of totals cannot show. Tap a row to open that day.',
+      'Insights → Calendar has What was going on: mark teething, a cold, a week away, first days at nursery. Marked days carry a dot on the calendar, show in the day, and go into the consultant log as their own line, which is the first thing she asks about a rough week.'
+    ]
+  },
+  {
     version: '1.15.1',
     date: '2026-09-20',
     title: 'An early night is a night, not a nap',

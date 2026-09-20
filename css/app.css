@@ -829,6 +829,20 @@
   .month-cell[data-state="soon"]{ background:var(--accent-soft); border-color:var(--accent); }
   .month-cell[data-state="soon"] .month-figure{ color:var(--accent); }
   .month-cell[data-today="true"]{ box-shadow:0 0 0 2px var(--ink); }
+  /* A marked day. Small and in the corner: it is context, not a verdict. */
+  .month-cell{ position:relative; }
+  .month-mark{
+    position:absolute; top:3px; right:3px;
+    width:5px; height:5px; border-radius:50%;
+    background:var(--ink-soft);
+  }
+  .day-marks{ display:flex; flex-wrap:wrap; gap:6px; }
+  .day-mark{
+    font-size:0.72rem; color:var(--ink);
+    background:var(--surface-2); border:1px solid var(--border);
+    border-radius:999px; padding:3px 9px;
+  }
+  .btn-small{ padding:5px 12px; font-size:0.78rem; }
   .month-cell:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
   .month-summary{
     margin:12px 0 0; font-size:0.78rem; color:var(--ink-soft); line-height:1.6;
