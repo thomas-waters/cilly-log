@@ -780,6 +780,17 @@
 
     <section class="summary-grid" id="summary-grid" aria-label="This period compared with the one before"></section>
 
+    <section class="panel" id="band-panel" aria-label="The shape of his days">
+      <div class="panel-head">
+        <h2>The shape of his days</h2>
+        <span class="chart-range" id="band-range">Last 7 days</span>
+      </div>
+      <div class="chart-legend"><span><i class="legend-swatch"></i>Night</span><span><i class="legend-swatch naps"></i>Naps</span></div>
+      <svg class="chart-svg band-svg" id="band-chart" viewBox="0 0 336 200" role="img" aria-label="Sleep by time of day, one row per day"></svg>
+      <p class="form-hint" id="band-empty" hidden>Nothing logged in this stretch yet.</p>
+      <p class="form-hint">Each row runs from one morning to the next, so a night sits at the right-hand end and carries over to the row below. Tap a row to open that day.</p>
+    </section>
+
     <section class="panel" id="norms-panel" aria-label="How this compares with his age" hidden>
       <div class="panel-head">
         <h2>Usual for his age</h2>

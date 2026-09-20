@@ -242,6 +242,21 @@
   .chart-legend{ display:flex; gap:14px; font-size:0.75rem; color:var(--ink-soft); }
   .legend-swatch{ display:inline-block; width:10px; height:10px; border-radius:3px; background:var(--accent); margin-right:6px; vertical-align:-1px; }
   .legend-swatch.naps{ opacity:.45; }
+  /* The day bands. The lane is the empty clock behind each row, so a day with
+     nothing logged reads as blank rather than as a day without sleep. */
+  .band-svg{ overflow:visible; }
+  .band-lane{ fill:var(--surface-2); }
+  .band-label{
+    fill:var(--ink-soft); font-size:6.5px; text-anchor:end; dominant-baseline:middle;
+    font-family:"JetBrains Mono", ui-monospace, monospace;
+  }
+  .band-tick{
+    fill:var(--ink-soft); font-size:6.5px; text-anchor:middle;
+    font-family:"JetBrains Mono", ui-monospace, monospace;
+  }
+  .band-hit{ fill:transparent; cursor:pointer; }
+  .band-hit:hover{ fill:var(--accent); opacity:.08; }
+
   .chart-seg-night{ fill:var(--accent); }
   .chart-seg-nap{ fill:var(--accent); opacity:.45; }
   .chart-bar-group{ cursor:pointer; }

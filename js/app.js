@@ -852,6 +852,7 @@
       summaryTile('Feeds a day', thisWeek.feedsPerDay ? Math.round(thisWeek.feedsPerDay * 10) / 10 : '—', thisWeek.feedsPerDay, lastWeek.feedsPerDay, perDay, thisWeek.milkDays) +
       summaryTile('Meals a day', thisWeek.mealsPerDay ? Math.round(thisWeek.mealsPerDay * 10) / 10 : '—', thisWeek.mealsPerDay, lastWeek.mealsPerDay, meals, thisWeek.mealsDays);
 
+    renderDayBands();
     renderDayTable();
     renderNorms();
     renderMonth();
@@ -1033,6 +1034,94 @@
         ? 'Averages cover all ' + summaryDays + ' days.'
         : 'Averages count only days with something logged (' + plural(loggedDays, 'day') + ' of ' + summaryDays + '). Each column counts its own days.');
   }
+
+  // ======================================================
+  // THE SHAPE OF HIS DAYS
+  // ======================================================
+  // A row a day, drawn against the clock, so sleep is a block of time rather
+  // than a number of hours. It is the picture a sleep consultant reads first:
+  // bedtime drifting later, a night breaking in two, a third nap creeping back
+  // in - none of which a column of totals can show.
+  //
+  // A row runs from when night ends to when it ends again, which is the same
+  // stretch the rest of the page counts as a day: that day's naps, and the
+  // night that started that evening. Sleep is drawn at the time it actually
+  // happened, so a night running past the morning boundary carries over to the
+  // left-hand end of the row below - the two edges meet, as they do on paper.
+  var BAND_W = 336, BAND_LEFT = 36, BAND_RIGHT = 3, BAND_TOP = 12, BAND_BOTTOM = 15;
+  var BAND_MINUTES = 1440;
+
+  function bandRowStart(key){
+    var parts = key.split('-').map(Number);
+    var d = new Date(parts[0], parts[1] - 1, parts[2]);
+    d.setHours(0, nightBounds().end, 0, 0);
+    return d.getTime();
+  }
+
+  function renderDayBands(){
+    var keys = dayKeysEndingToday(0, summaryDays).slice().reverse(); // oldest at the top
+    var rows = keys.length;
+    // Seven days can afford a fat row; twelve weeks has to thin down to fit on
+    // a screen at all, and still reads, because it is the shape that matters.
+    var rowH = Math.max(4, Math.min(17, Math.round(340 / rows)));
+    var gap = rowH > 8 ? 2 : 1;
+    var plotW = BAND_W - BAND_LEFT - BAND_RIGHT;
+    var perMin = plotW / BAND_MINUTES;
+    var height = BAND_TOP + rows * (rowH + gap) + BAND_BOTTOM;
+    var nightEnd = nightBounds().end;
+
+    var body = '', anyData = false;
+    keys.forEach(function(key, i){
+      var top = BAND_TOP + i * (rowH + gap);
+      var from = bandRowStart(key), to = from + BAND_MINUTES * 60000;
+      var totals = dayTotals(key);
+      var has = (totals.night + totals.naps) > 0;
+      if (has) anyData = true;
+
+      body += '<rect class="band-lane" x="' + BAND_LEFT + '" y="' + top + '" width="' + plotW + '" height="' + rowH + '" rx="2"></rect>';
+
+      state.entries.forEach(function(e){
+        var s = entryStart(e).getTime(), en = entryEnd(e).getTime();
+        var a = Math.max(s, from), b = Math.min(en, to);
+        if (b <= a) return;
+        var x = BAND_LEFT + ((a - from) / 60000) * perMin;
+        var w = Math.max(0.8, ((b - a) / 60000) * perMin);
+        body += '<rect class="' + (isNight(e) ? 'chart-seg-night' : 'chart-seg-nap') +
+          '" x="' + round1(x) + '" y="' + top + '" width="' + round1(w) + '" height="' + rowH + '" rx="1"></rect>';
+      });
+
+      // Twelve weeks of rows are thinner than the text, so at that height the
+      // dates thin out to one a week and the rows in between are read off the
+      // one above.
+      if (rowH >= 9 || i % 7 === 0){
+        var label = new Date(from).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' });
+        body += '<text class="band-label" x="' + (BAND_LEFT - 5) + '" y="' + (top + rowH / 2) + '">' + escapeHtml(label) + '</text>';
+      }
+      body += '<rect class="band-hit" data-band-day="' + key + '" x="0" y="' + top + '" width="' + BAND_W + '" height="' + rowH + '"></rect>';
+    });
+
+    // Six-hourly marks, counted from the start of the row rather than from
+    // midnight, so they land on whatever this family's night end is.
+    var ticks = '';
+    for (var m = 0; m <= BAND_MINUTES; m += 360){
+      var x = BAND_LEFT + m * perMin;
+      if (m > 0 && m < BAND_MINUTES){
+        ticks += '<line class="chart-gridline" x1="' + round1(x) + '" y1="' + BAND_TOP + '" x2="' + round1(x) + '" y2="' + (height - BAND_BOTTOM) + '"></line>';
+      }
+      ticks += '<text class="band-tick" x="' + round1(x) + '" y="' + (height - 4) + '">' + fmtClock((nightEnd + m) % 1440) + '</text>';
+    }
+
+    el('band-chart').setAttribute('viewBox', '0 0 ' + BAND_W + ' ' + height);
+    el('band-chart').innerHTML = ticks + body;
+    el('band-empty').hidden = anyData;
+    el('band-range').textContent = summaryDays === 7 ? 'Last 7 days' : 'Last ' + (summaryDays / 7) + ' weeks';
+  }
+  function round1(n){ return Math.round(n * 10) / 10; }
+
+  el('band-chart').addEventListener('click', function(ev){
+    var hit = ev.target.closest('[data-band-day]');
+    if (hit) openDay(hit.getAttribute('data-band-day'));
+  });
 
   // ======================================================
   // MONTH AT A GLANCE
