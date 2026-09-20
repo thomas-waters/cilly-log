@@ -32,6 +32,21 @@ It holds real family records: treat the live data with care.
   `settings`, `prefs`) applied to an in-memory state and persisted through the
   store; see `applyOps` and `commit` in `js/app.js`. Keep new features on that
   model.
+- **A failed save is not a lost one.** `persist` puts ops that the store
+  refused into an outbox in `localStorage`, which `applyOutbox` re-applies over
+  anything the database sends back so what was logged stays on screen, and
+  `flushOutbox` drains in order on the next open, when the browser comes back
+  online, when the tab is shown again, or after any other save succeeds. Ops
+  are keyed by what they are about, so a later write of the same record or row
+  replaces an earlier one instead of both being replayed. Never make a code
+  path that writes straight to the store and skips this.
+- **What was going on** — teething, a cold, a week away — lives in
+  `state.markers`, one `app_state` row holding the lot, written by the
+  `markers` op. It is a handful of entries a month, so it does not earn a
+  table; if that changes, give it one. Each marker is a kind, a first and last
+  date and a note, and it surfaces in three places: a dot on the calendar
+  cell, a chip in the day, and an "All day" row in the consultant log, which
+  is the context she asks about first.
 - **Settings are shared, preferences are not.** `state.settings` is one
   `app_state` row both phones read, so anything about Cillian or about how the
   family logs belongs there. `state.prefs` is a row per person,
@@ -53,6 +68,18 @@ It holds real family records: treat the live data with care.
   Each overlay lives inside its own view, so only the current view's can be on
   screen. Anything new that records something should follow that, not put a
   form inline on the page.
+- **The family is in Ireland, so the HSE comes first.** `js/sleep-model.js`
+  takes night sleep and nap figures from the HSE's per-age pages, 24-hour
+  totals from the AASM consensus (which the HSE does not state, and which does
+  not cover under-4-months), and wake windows from parenting charts because no
+  health service publishes them. Where sources disagree, the HSE wins for the
+  ages it covers: those are the figures a public health nurse works from. Keep
+  the bands wide enough to contain what the published guidance calls usual —
+  narrowing them would flag a baby the HSE would call ordinary. Every source is
+  listed with a link in `sourceList`, shown by the info buttons beside "Usual
+  for his age" and the month grid, and anything without a link is convention
+  rather than guidance and says so. Say "public health nurse", not "health
+  visitor".
 - Night sleep vs naps, the sleep guide and time-to-settle are all computed
   from settings stored in the database plus `js/sleep-model.js`, not
   hard-coded in the views. `isNight` decides it by where a sleep happened, not
@@ -76,6 +103,12 @@ It holds real family records: treat the live data with care.
   not touch. Everything renders whatever tab is open, so switching is instant
   and printing can unhide them all. Anything new goes in the tab whose job it
   shares, or it needs a tab of its own.
+- **The shape of his days** (Overview, `renderDayBands`) is a row a day drawn
+  against the clock. A row runs from one night end to the next — the same
+  stretch `sleepDayKey` counts as a day — and sleep is drawn at the time it
+  happened, so a night running past the morning boundary carries over to the
+  left-hand end of the row below rather than being clipped. Keep it that way:
+  the two edges meeting is what makes it readable as one continuous night.
 - The Calendar tab's **Month at a glance** answers one question — did he get
   enough? —
   so only a shortfall is coloured: at or above the range is green, within an

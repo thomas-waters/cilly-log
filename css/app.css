@@ -164,6 +164,13 @@
   .view-solids{ --accent:var(--solid); --accent-soft:var(--solid-soft); --accent-ink:var(--solid-ink); }
   .view-meds{ --accent:var(--med); --accent-soft:var(--med-soft); --accent-ink:var(--med-ink); }
 
+  /* Waiting to sync is not a warning: nothing is lost and there is nothing to
+     do about it, so it says so quietly. */
+  .notice-wait{
+    background:var(--accent-soft) !important;
+    border-color:var(--accent) !important;
+    color:var(--ink-soft) !important;
+  }
   .notice{
     background:var(--warn-soft);
     border:1px solid var(--warn);
@@ -235,6 +242,21 @@
   .chart-legend{ display:flex; gap:14px; font-size:0.75rem; color:var(--ink-soft); }
   .legend-swatch{ display:inline-block; width:10px; height:10px; border-radius:3px; background:var(--accent); margin-right:6px; vertical-align:-1px; }
   .legend-swatch.naps{ opacity:.45; }
+  /* The day bands. The lane is the empty clock behind each row, so a day with
+     nothing logged reads as blank rather than as a day without sleep. */
+  .band-svg{ overflow:visible; }
+  .band-lane{ fill:var(--surface-2); }
+  .band-label{
+    fill:var(--ink-soft); font-size:6.5px; text-anchor:end; dominant-baseline:middle;
+    font-family:"JetBrains Mono", ui-monospace, monospace;
+  }
+  .band-tick{
+    fill:var(--ink-soft); font-size:6.5px; text-anchor:middle;
+    font-family:"JetBrains Mono", ui-monospace, monospace;
+  }
+  .band-hit{ fill:transparent; cursor:pointer; }
+  .band-hit:hover{ fill:var(--accent); opacity:.08; }
+
   .chart-seg-night{ fill:var(--accent); }
   .chart-seg-nap{ fill:var(--accent); opacity:.45; }
   .chart-bar-group{ cursor:pointer; }
@@ -760,6 +782,23 @@
   .summary-delta[data-dir="down"]{ color:var(--warn); }
 
   /* ---------- month at a glance ---------- */
+  /* The info button beside anything that judges a day against a published
+     range, and the list it opens. */
+  .head-aside{ display:flex; align-items:center; gap:6px; }
+  .info-btn{
+    flex:none; width:22px; height:22px; padding:0;
+    display:flex; align-items:center; justify-content:center;
+    background:none; border:none; border-radius:50%;
+    color:var(--ink-soft); cursor:pointer;
+  }
+  .info-btn svg{ width:16px; height:16px; }
+  .info-btn:hover{ color:var(--accent); }
+  .info-btn:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+  .source-list{ display:flex; flex-direction:column; gap:14px; }
+  .source p{ margin:3px 0 0; font-size:0.8rem; line-height:1.5; color:var(--ink-soft); }
+  .source-name{ font-size:0.86rem; font-weight:600; color:var(--ink); }
+  a.source-name{ color:var(--accent); text-decoration:underline; text-underline-offset:2px; }
+
   .month-head{ flex-wrap:wrap; }
   /* Its own row under the heading: a month name and two arrows do not fit
      beside a title on a phone, and arrows at the edges are easier to hit. */
@@ -807,6 +846,20 @@
   .month-cell[data-state="soon"]{ background:var(--accent-soft); border-color:var(--accent); }
   .month-cell[data-state="soon"] .month-figure{ color:var(--accent); }
   .month-cell[data-today="true"]{ box-shadow:0 0 0 2px var(--ink); }
+  /* A marked day. Small and in the corner: it is context, not a verdict. */
+  .month-cell{ position:relative; }
+  .month-mark{
+    position:absolute; top:3px; right:3px;
+    width:5px; height:5px; border-radius:50%;
+    background:var(--ink-soft);
+  }
+  .day-marks{ display:flex; flex-wrap:wrap; gap:6px; }
+  .day-mark{
+    font-size:0.72rem; color:var(--ink);
+    background:var(--surface-2); border:1px solid var(--border);
+    border-radius:999px; padding:3px 9px;
+  }
+  .btn-small{ padding:5px 12px; font-size:0.78rem; }
   .month-cell:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
   .month-summary{
     margin:12px 0 0; font-size:0.78rem; color:var(--ink-soft); line-height:1.6;

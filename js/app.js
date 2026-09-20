@@ -420,7 +420,7 @@
   // Each one lives inside its own view, so only the current view's can show.
   // The confirm is first: it opens over the others, so Escape should reach it
   // before the form underneath.
-  var OVERLAYS = ['confirm-overlay', 'changelog-overlay', 'settings-overlay', 'day-overlay', 'entry-overlay', 'milk-overlay', 'solid-overlay', 'med-overlay'];
+  var OVERLAYS = ['confirm-overlay', 'changelog-overlay', 'settings-overlay', 'sources-overlay', 'marker-overlay', 'day-overlay', 'entry-overlay', 'milk-overlay', 'solid-overlay', 'med-overlay'];
   function openOverlay(id){
     el(id).hidden = false;
   }
@@ -559,6 +559,9 @@
     else if (kind === 'milk'){ editMilk(id, false); }
     else if (kind === 'solids'){ editSolid(id, false); }
     else if (kind === 'meds'){ editMed(id, false); }
+    // Markers are edited where they are listed, on the Calendar tab, so this
+    // one does not move the page first.
+    else if (kind === 'marker'){ openMarkerForm(id); }
   }
 
   // ---------- drafts: what someone is mid-typing survives a reload ----------
@@ -676,6 +679,8 @@
         state.settings = op.settings;
       } else if (op.type === 'prefs'){
         state.prefs = op.prefs;
+      } else if (op.type === 'markers'){
+        state.markers = op.markers;
       }
     });
   }
@@ -852,9 +857,11 @@
       summaryTile('Feeds a day', thisWeek.feedsPerDay ? Math.round(thisWeek.feedsPerDay * 10) / 10 : '—', thisWeek.feedsPerDay, lastWeek.feedsPerDay, perDay, thisWeek.milkDays) +
       summaryTile('Meals a day', thisWeek.mealsPerDay ? Math.round(thisWeek.mealsPerDay * 10) / 10 : '—', thisWeek.mealsPerDay, lastWeek.mealsPerDay, meals, thisWeek.mealsDays);
 
+    renderDayBands();
     renderDayTable();
     renderNorms();
     renderMonth();
+    renderMarkers();
     el('print-heading').textContent = 'Cilly Log — ' + summaryDays + ' days to ' +
       new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -941,9 +948,11 @@
       row('Naps a day', averageOver(naps), band.naps[0], band.naps[1], count) +
       '</tbody>';
 
+    // "Public health nurse" rather than health visitor: this family is in
+    // Ireland, and so are the figures above them.
     el('norms-note').textContent = (band.note ? band.note + ' ' : '') +
-      MODEL.sources + ' Every baby is different, and a week outside a range is not a problem by itself ' +
-      '— it is a question for your health visitor or GP, not a verdict.';
+      MODEL.sources + ' Tap the info button for all of them. Every baby is different, and a week outside a ' +
+      'range is not a problem by itself — it is a question for your public health nurse or GP, not a verdict.';
   }
 
   function dayTotals(key){
@@ -1033,6 +1042,249 @@
         ? 'Averages cover all ' + summaryDays + ' days.'
         : 'Averages count only days with something logged (' + plural(loggedDays, 'day') + ' of ' + summaryDays + '). Each column counts its own days.');
   }
+
+  // ---------- where the figures come from ----------
+  // The app judges his days against published ranges, so it has to be able to
+  // show whose ranges they are. The list lives with the model in
+  // js/sleep-model.js, and opens from the info button beside anything that
+  // uses it. Links open in the browser rather than inside the app.
+  function renderSources(){
+    var list = (MODEL && MODEL.sourceList) || [];
+    el('sources-intro').textContent = 'The HSE publishes what a child needs at each age, so those are the figures here. ' +
+      'The rest fills in what it does not cover.';
+    el('sources-list').innerHTML = list.map(function(s){
+      var head = s.url
+        ? '<a class="source-name" href="' + escapeHtml(s.url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(s.name) + '</a>'
+        : '<span class="source-name">' + escapeHtml(s.name) + '</span>';
+      return '<div class="source">' + head + '<p>' + escapeHtml(s.what) + '</p></div>';
+    }).join('');
+  }
+  function openSources(){
+    renderSources();
+    openOverlay('sources-overlay');
+    el('sources-close').focus();
+  }
+  function closeSources(){ closeOverlay('sources-overlay'); }
+  el('sources-close').addEventListener('click', closeSources);
+  el('sources-overlay').addEventListener('click', function(ev){ if (ev.target === el('sources-overlay')) closeSources(); });
+
+  // ======================================================
+  // WHAT WAS GOING ON
+  // ======================================================
+  // Teething, a cold, a week away, the first days at nursery. Without them a
+  // rough fortnight in the figures looks like a mystery when you knew exactly
+  // what it was at the time - and you cannot add them afterwards, because by
+  // then you have forgotten. They sit on the calendar, in the day, and in the
+  // consultant log, which is the question she asks first.
+  var MARKER_KINDS = [
+    { id: 'teething', label: 'Teething' },
+    { id: 'ill', label: 'Unwell' },
+    { id: 'travel', label: 'Away from home' },
+    { id: 'nursery', label: 'Nursery' },
+    { id: 'jabs', label: 'Vaccinations' },
+    { id: 'other', label: 'Something else' }
+  ];
+  function markerLabel(kind){
+    for (var i = 0; i < MARKER_KINDS.length; i++){ if (MARKER_KINDS[i].id === kind) return MARKER_KINDS[i].label; }
+    return 'Something else';
+  }
+  // Marked days are stored as a first and last date, so a week away is one
+  // entry rather than seven.
+  function markersOn(key){
+    return (state.markers || []).filter(function(m){
+      return key >= m.from && key <= (m.to || m.from);
+    });
+  }
+  function nextDayKey(key){
+    var parts = key.split('-').map(Number);
+    var d = new Date(parts[0], parts[1] - 1, parts[2] + 1);
+    return dateKey(d);
+  }
+  function markerSpan(m){
+    var to = m.to || m.from;
+    return m.from === to ? friendlyDate(m.from) : friendlyDate(m.from) + ' – ' + friendlyDate(to);
+  }
+  function markerText(m){
+    return markerLabel(m.kind) + (m.note ? ' — ' + m.note : '');
+  }
+  function sortedMarkers(){
+    return (state.markers || []).slice().sort(function(a, b){ return a.from < b.from ? 1 : a.from > b.from ? -1 : 0; });
+  }
+
+  function renderMarkers(){
+    var list = sortedMarkers();
+    el('marker-list').innerHTML = list.length
+      ? list.map(function(m){
+          return '<div class="entry-row">' +
+            '<div class="entry-main">' +
+              '<span class="entry-range">' + escapeHtml(markerLabel(m.kind)) + '</span>' +
+              '<span class="entry-meta"><span class="meta-tag">' + escapeHtml(markerSpan(m)) + '</span></span>' +
+              (m.note ? '<span class="entry-notes">' + escapeHtml(m.note) + '</span>' : '') +
+            '</div>' +
+            '<div class="entry-side">' +
+              '<button class="icon-btn writer-only" data-edit="marker" data-id="' + m.id + '" aria-label="Edit ' + escapeHtml(markerLabel(m.kind)) + '" type="button">' + ICON.pencil + '</button>' +
+            '</div>' +
+          '</div>';
+        }).join('')
+      : '<p class="form-hint">Nothing marked yet. Add teething, a cold or a week away and it will show on the calendar and in the consultant log.</p>';
+  }
+
+  function resetMarkerForm(){
+    el('mk-id').value = '';
+    el('mk-kind').value = 'teething';
+    el('mk-from').value = dateKey(new Date());
+    el('mk-to').value = '';
+    el('mk-note').value = '';
+    el('marker-title').textContent = 'What was going on';
+    el('mk-delete').hidden = true;
+    hideError('mk-error');
+  }
+  function openMarkerForm(id){
+    if (readOnly) return;
+    resetMarkerForm();
+    if (id){
+      var m = (state.markers || []).filter(function(x){ return x.id === id; })[0];
+      if (m){
+        el('mk-id').value = m.id;
+        el('mk-kind').value = m.kind;
+        el('mk-from').value = m.from;
+        el('mk-to').value = m.to && m.to !== m.from ? m.to : '';
+        el('mk-note').value = m.note || '';
+        el('marker-title').textContent = 'Edit ' + markerLabel(m.kind).toLowerCase();
+        el('mk-delete').hidden = false;
+      }
+    }
+    openOverlay('marker-overlay');
+    el('mk-kind').focus();
+  }
+  function closeMarkerForm(){ closeOverlay('marker-overlay'); }
+  el('marker-add').addEventListener('click', function(){ openMarkerForm(''); });
+  el('marker-close').addEventListener('click', closeMarkerForm);
+  el('mk-cancel').addEventListener('click', closeMarkerForm);
+  el('marker-overlay').addEventListener('click', function(ev){ if (ev.target === el('marker-overlay')) closeMarkerForm(); });
+
+  el('marker-form').addEventListener('submit', async function(ev){
+    ev.preventDefault();
+    hideError('mk-error');
+    var from = el('mk-from').value, to = el('mk-to').value;
+    if (!from){ showError('mk-error', 'Pick the day it started.', 'mk-from'); return; }
+    if (to && to < from){ showError('mk-error', 'The last day can’t be before the first.', 'mk-to'); return; }
+    var marker = {
+      id: el('mk-id').value || uid(),
+      kind: el('mk-kind').value,
+      from: from,
+      to: to || from,
+      note: el('mk-note').value.trim(),
+      createdBy: state.me || ''
+    };
+    var rest = (state.markers || []).filter(function(m){ return m.id !== marker.id; });
+    showToast(el('mk-id').value ? 'Updated' : markerLabel(marker.kind) + ' marked');
+    closeMarkerForm();
+    await commit([{ type: 'markers', markers: rest.concat([marker]) }]);
+  });
+
+  el('mk-delete').addEventListener('click', function(){
+    var id = el('mk-id').value;
+    var m = (state.markers || []).filter(function(x){ return x.id === id; })[0];
+    if (!m) return;
+    askConfirm({
+      title: 'Delete this?',
+      text: markerText(m) + ', ' + markerSpan(m) + '. This cannot be undone.',
+      onConfirm: async function(){
+        closeMarkerForm();
+        showToast('Deleted');
+        await commit([{ type: 'markers', markers: (state.markers || []).filter(function(x){ return x.id !== id; }) }]);
+      }
+    });
+  });
+
+  // ======================================================
+  // THE SHAPE OF HIS DAYS
+  // ======================================================
+  // A row a day, drawn against the clock, so sleep is a block of time rather
+  // than a number of hours. It is the picture a sleep consultant reads first:
+  // bedtime drifting later, a night breaking in two, a third nap creeping back
+  // in - none of which a column of totals can show.
+  //
+  // A row runs from when night ends to when it ends again, which is the same
+  // stretch the rest of the page counts as a day: that day's naps, and the
+  // night that started that evening. Sleep is drawn at the time it actually
+  // happened, so a night running past the morning boundary carries over to the
+  // left-hand end of the row below - the two edges meet, as they do on paper.
+  var BAND_W = 336, BAND_LEFT = 36, BAND_RIGHT = 3, BAND_TOP = 12, BAND_BOTTOM = 15;
+  var BAND_MINUTES = 1440;
+
+  function bandRowStart(key){
+    var parts = key.split('-').map(Number);
+    var d = new Date(parts[0], parts[1] - 1, parts[2]);
+    d.setHours(0, nightBounds().end, 0, 0);
+    return d.getTime();
+  }
+
+  function renderDayBands(){
+    var keys = dayKeysEndingToday(0, summaryDays).slice().reverse(); // oldest at the top
+    var rows = keys.length;
+    // Seven days can afford a fat row; twelve weeks has to thin down to fit on
+    // a screen at all, and still reads, because it is the shape that matters.
+    var rowH = Math.max(4, Math.min(17, Math.round(340 / rows)));
+    var gap = rowH > 8 ? 2 : 1;
+    var plotW = BAND_W - BAND_LEFT - BAND_RIGHT;
+    var perMin = plotW / BAND_MINUTES;
+    var height = BAND_TOP + rows * (rowH + gap) + BAND_BOTTOM;
+    var nightEnd = nightBounds().end;
+
+    var body = '', anyData = false;
+    keys.forEach(function(key, i){
+      var top = BAND_TOP + i * (rowH + gap);
+      var from = bandRowStart(key), to = from + BAND_MINUTES * 60000;
+      var totals = dayTotals(key);
+      var has = (totals.night + totals.naps) > 0;
+      if (has) anyData = true;
+
+      body += '<rect class="band-lane" x="' + BAND_LEFT + '" y="' + top + '" width="' + plotW + '" height="' + rowH + '" rx="2"></rect>';
+
+      state.entries.forEach(function(e){
+        var s = entryStart(e).getTime(), en = entryEnd(e).getTime();
+        var a = Math.max(s, from), b = Math.min(en, to);
+        if (b <= a) return;
+        var x = BAND_LEFT + ((a - from) / 60000) * perMin;
+        var w = Math.max(0.8, ((b - a) / 60000) * perMin);
+        body += '<rect class="' + (isNight(e) ? 'chart-seg-night' : 'chart-seg-nap') +
+          '" x="' + round1(x) + '" y="' + top + '" width="' + round1(w) + '" height="' + rowH + '" rx="1"></rect>';
+      });
+
+      // Twelve weeks of rows are thinner than the text, so at that height the
+      // dates thin out to one a week and the rows in between are read off the
+      // one above.
+      if (rowH >= 9 || i % 7 === 0){
+        var label = new Date(from).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' });
+        body += '<text class="band-label" x="' + (BAND_LEFT - 5) + '" y="' + (top + rowH / 2) + '">' + escapeHtml(label) + '</text>';
+      }
+      body += '<rect class="band-hit" data-band-day="' + key + '" x="0" y="' + top + '" width="' + BAND_W + '" height="' + rowH + '"></rect>';
+    });
+
+    // Six-hourly marks, counted from the start of the row rather than from
+    // midnight, so they land on whatever this family's night end is.
+    var ticks = '';
+    for (var m = 0; m <= BAND_MINUTES; m += 360){
+      var x = BAND_LEFT + m * perMin;
+      if (m > 0 && m < BAND_MINUTES){
+        ticks += '<line class="chart-gridline" x1="' + round1(x) + '" y1="' + BAND_TOP + '" x2="' + round1(x) + '" y2="' + (height - BAND_BOTTOM) + '"></line>';
+      }
+      ticks += '<text class="band-tick" x="' + round1(x) + '" y="' + (height - 4) + '">' + fmtClock((nightEnd + m) % 1440) + '</text>';
+    }
+
+    el('band-chart').setAttribute('viewBox', '0 0 ' + BAND_W + ' ' + height);
+    el('band-chart').innerHTML = ticks + body;
+    el('band-empty').hidden = anyData;
+    el('band-range').textContent = summaryDays === 7 ? 'Last 7 days' : 'Last ' + (summaryDays / 7) + ' weeks';
+  }
+  function round1(n){ return Math.round(n * 10) / 10; }
+
+  el('band-chart').addEventListener('click', function(ev){
+    var hit = ev.target.closest('[data-band-day]');
+    if (hit) openDay(hit.getAttribute('data-band-day'));
+  });
 
   // ======================================================
   // MONTH AT A GLANCE
@@ -1163,11 +1415,16 @@
       var label = longDayName(day.key) + (day.ms ? ', ' + fmtDur(day.ms) + ' ' + metric.label : '') +
         (MONTH_WORDS[day.state] ? ', ' + MONTH_WORDS[day.state] : '');
       var disabled = day.state === 'future' || day.state === 'before';
+      // A marked day carries a dot, so a run of short nights and the week he
+      // was teething are visible in the same glance.
+      var marks = markersOn(day.key);
+      if (marks.length) label += ', ' + marks.map(markerText).join(', ');
       cells += '<button type="button" class="month-cell" data-day="' + day.key + '"' +
         ' data-state="' + day.state + '"' + (day.key === todayKey ? ' data-today="true"' : '') +
         (disabled ? ' disabled' : '') + ' aria-label="' + escapeHtml(label) + '">' +
         '<span class="month-date">' + d + '</span>' +
         '<span class="month-figure">' + figure + '</span>' +
+        (marks.length ? '<span class="month-mark" aria-hidden="true"></span>' : '') +
       '</button>';
     }
     el('month-grid').innerHTML = cells;
@@ -1298,6 +1555,12 @@
       verdict.textContent = fmtDur(day.ms) + ' of ' + metric.label + ' logged.';
       verdict.dataset.state = 'plain';
     }
+
+    var marks = markersOn(key);
+    el('day-markers').innerHTML = marks.map(function(m){
+      return '<span class="day-mark">' + escapeHtml(markerText(m)) + '</span>';
+    }).join('');
+    el('day-markers').hidden = !marks.length;
 
     var sleeps = state.entries.filter(function(e){ return sleepDayKey(e) === key; })
       .sort(function(a, b){ return entryStart(a) - entryStart(b); });
@@ -1479,6 +1742,17 @@
         if (at >= cutoff) out.push({ at: at, kind: 'meds', when: fmtTime(at), text: reportLines(m, 'meds') });
       });
     }
+    // Anything marked about a day opens that day. Still one event a row and
+    // two columns, but with no clock: "he was teething" is a day, not a
+    // moment, and it is the first thing the consultant asks about a bad week.
+    (state.markers || []).forEach(function(m){
+      var to = m.to || m.from;
+      for (var key = m.from; key <= to; key = nextDayKey(key)){
+        var at = new Date(key + 'T00:00:00');
+        if (at < cutoff || at > new Date()) continue;
+        out.push({ at: at, kind: 'marker', when: 'All day', text: markerText(m) });
+      }
+    });
     return out.sort(function(a, b){ return a.at - b.at; });
   }
 
@@ -3140,6 +3414,8 @@
     if (open === 'confirm-overlay') closeConfirm();
     else if (open === 'changelog-overlay') closeChangelog();
     else if (open === 'settings-overlay') closeSettings();
+    else if (open === 'sources-overlay') closeSources();
+    else if (open === 'marker-overlay') closeMarkerForm();
     else if (open === 'day-overlay') closeDay();
     else if (open === 'entry-overlay') closeForm();
     else if (open === 'milk-overlay') closeMilkForm();
@@ -3208,11 +3484,95 @@
   // ======================================================
   // PERSIST
   // ======================================================
+  // ---------- the outbox ----------
+  // A save that fails used to say so and then vanish: the entry lived in
+  // memory until the next reload took it. In a nursery corridor at 3am that is
+  // the log quietly losing a night. Failed ops now wait on the device instead,
+  // are re-applied over whatever the database sends back so they stay on
+  // screen, and go up the moment anything works again.
+  var OUTBOX_KEY = 'cilly.outbox';
+  function outboxRead(){
+    try {
+      var raw = window.localStorage.getItem(OUTBOX_KEY);
+      var list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list : [];
+    } catch (e) { return []; }
+  }
+  function outboxWrite(list){
+    try { window.localStorage.setItem(OUTBOX_KEY, JSON.stringify(list)); } catch (e) {}
+    renderOutbox();
+  }
+  // What an op is about, so a later one can replace an earlier one for the
+  // same thing rather than both being replayed in turn.
+  function opKey(op){
+    if (op.type === 'upsert') return 'upsert:' + op.collection + ':' + op.record.id;
+    if (op.type === 'delete') return 'delete:' + op.collection + ':' + op.id;
+    return op.type; // status, settings and prefs are each one whole row
+  }
+  function outboxAdd(ops){
+    var list = outboxRead();
+    ops.forEach(function(op){
+      var key = opKey(op);
+      // A delete cancels a queued upsert of the same record, and the newest
+      // write of a whole row is the only one worth sending.
+      list = list.filter(function(q){
+        if (q.key === key) return false;
+        if (op.type === 'delete' && q.key === 'upsert:' + op.collection + ':' + op.id) return false;
+        return true;
+      });
+      list.push({ key: key, op: op, at: Date.now() });
+    });
+    outboxWrite(list);
+  }
+  // Ops waiting to be sent are re-applied on top of server state, so an entry
+  // logged offline stays visible instead of disappearing on the next reload or
+  // when the other phone changes something.
+  function applyOutbox(){
+    var list = outboxRead();
+    if (list.length) applyOps(list.map(function(q){ return q.op; }));
+  }
+  var flushing = false;
+  async function flushOutbox(){
+    if (flushing) return;
+    var list = outboxRead();
+    if (!list.length) return;
+    flushing = true;
+    try {
+      while (list.length){
+        // One at a time and in order: a batch that fails half way through
+        // would otherwise be sent twice.
+        var head = list[0];
+        await store.apply([head.op], state);
+        list = outboxRead().filter(function(q){ return !(q.key === head.key && q.at === head.at); });
+        outboxWrite(list);
+      }
+      showToast('Everything waiting has been saved.');
+    } catch (e) {
+      // Still no connection, or the database said no. Leave the rest queued.
+    }
+    flushing = false;
+  }
+  function renderOutbox(){
+    var n = outboxRead().length;
+    var note = el('outbox-note');
+    note.hidden = !n;
+    note.textContent = n === 1
+      ? 'One entry is saved on this phone and waiting to sync.'
+      : n + ' entries are saved on this phone and waiting to sync.';
+  }
+  window.addEventListener('online', flushOutbox);
+  document.addEventListener('visibilitychange', function(){
+    if (!document.hidden) flushOutbox();
+  });
+
   async function persist(ops){
     try {
       await store.apply(ops, state);
+      // Something worked, so anything held back is worth another go.
+      if (outboxRead().length) flushOutbox();
     } catch (e) {
-      showToast('Couldn\u2019t save that. Check your connection and try again.');
+      outboxAdd(ops);
+      showToast('No connection. Saved on this phone and it will sync itself.');
     }
   }
   // ======================================================
@@ -3224,6 +3584,8 @@
 
     var nav = target.closest('[data-nav]');
     if (nav){ goTo(nav.getAttribute('data-nav')); return; }
+
+    if (target.closest('[data-sources]')){ openSources(); return; }
 
     var refresh = target.closest('[data-refresh]');
     if (refresh){
@@ -3311,10 +3673,15 @@
     if (FEATURES.medicine) resetMedForm();
     restoreView();
     renderAll();
-    store.onChange(function(next){ state = next; renderAll(); });
+    // Anything still waiting to go up is re-applied over what arrives, so the
+    // app shows what was logged rather than what the database knows so far.
+    store.onChange(function(next){ state = next; applyOutbox(); renderAll(); });
     store.load().then(function(loaded){
       state = loaded;
+      applyOutbox();
       renderAll();
+      renderOutbox();
+      flushOutbox();
       restoreDrafts();
       if (store.kind === 'local') showNotice('Saving on this device only for now. Shared sync between phones comes once the database is connected.');
     }).catch(function(){
