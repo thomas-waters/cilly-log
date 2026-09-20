@@ -55,7 +55,12 @@ It holds real family records: treat the live data with care.
   form inline on the page.
 - Night sleep vs naps, the sleep guide and time-to-settle are all computed
   from settings stored in the database plus `js/sleep-model.js`, not
-  hard-coded in the views. Wake windows in that model describe the day only:
+  hard-coded in the views. `isNight` decides it by where a sleep happened, not
+  by the minute it began: inside the night window at its start, or most of its
+  length inside it. Do not put that back to a start-time test — five minutes
+  the wrong side of night start once turned 3h20 of night sleep into a nap,
+  and fourteen places read that one function. The rule only ever adds night
+  sleep, which is what keeps it safe. Wake windows in that model describe the day only:
   during night hours the app shows night sleep so far and says to settle
   them back, never a countdown. Keep it that way — a wake window is not a
   model of a 2am waking.

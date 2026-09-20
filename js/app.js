@@ -102,14 +102,44 @@
     var s = state.settings || {};
     return { start: minutesOf(s.nightStart || '19:00'), end: minutesOf(s.nightEnd || '06:00') };
   }
-  function isNight(e){
-    var m = minutesOf(e.start), b = nightBounds();
+  function startsInNight(m, b){
     return b.start > b.end ? (m >= b.start || m < b.end) : (m >= b.start && m < b.end);
   }
-  // Would a sleep starting at this moment count as night sleep?
+  // How much of a sleep landed inside the night window. The window usually
+  // wraps midnight, which makes it two stretches on the same timeline: the one
+  // that began this evening and the one that ended this morning.
+  function nightOverlap(e){
+    var b = nightBounds();
+    var start = minutesOf(e.start), end = minutesOf(e.end);
+    if (end <= start) end += 1440;
+    function inside(from, to){ return Math.max(0, Math.min(end, to) - Math.max(start, from)); }
+    return b.start > b.end
+      ? inside(b.start - 1440, b.end) + inside(b.start, b.end + 1440)
+      : inside(b.start, b.end) + inside(b.start + 1440, b.end + 1440);
+  }
+  // Night sleep is decided by where the sleep happened, not by the minute it
+  // began. Starting inside the window is night sleep as it always was, which
+  // keeps an early-morning resettle with the night before. Starting outside it
+  // counts too when most of the sleep fell inside: he went down at 17:55 one
+  // evening with night starting at 18:00, and calling all 3h20 of it a nap put
+  // it in the nap totals, left that night looking empty, and had the 3am hint
+  // blaming day sleep for a waking that came out of the night itself.
+  //
+  // The rule only ever adds night sleep, never takes it away, so nothing that
+  // was counted correctly before changes. A late nap that merely runs into the
+  // evening - 4pm to 7pm, an hour of it past night start - is still a nap.
+  function isNight(e){
+    var b = nightBounds(), start = minutesOf(e.start);
+    if (startsInNight(start, b)) return true;
+    var end = minutesOf(e.end);
+    if (end <= start) end += 1440;
+    var length = end - start;
+    return length > 0 && nightOverlap(e) * 2 > length;
+  }
+  // Would a sleep starting at this moment count as night sleep? Used for the
+  // clock rather than a record, so it can only ask about the start.
   function clockIsNight(d){
-    var m = d.getHours() * 60 + d.getMinutes(), b = nightBounds();
-    return b.start > b.end ? (m >= b.start || m < b.end) : (m >= b.start && m < b.end);
+    return startsInNight(d.getHours() * 60 + d.getMinutes(), nightBounds());
   }
   // The next time night sleep begins, at or after the given moment. Built from
   // calendar parts rather than by adding 24 hours, so clock changes don't shift it.

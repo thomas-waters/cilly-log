@@ -25,6 +25,16 @@
  */
 window.CILLY_CHANGELOG = [
   {
+    version: '1.15.1',
+    date: '2026-09-20',
+    title: 'An early night is a night, not a nap',
+    notes: [
+      'A sleep that started just before your night start counted as a nap, however long it ran. Going down at 5:55pm with night starting at 6 made 3h20 of night sleep into a nap, emptied that night and left the app blaming day sleep for the waking that followed.',
+      'What counts as night sleep now looks at where the sleep actually happened: it is night if it started in your night hours, as before, or if most of it fell inside them. A late nap that merely runs past your night start is still a nap.',
+      'Nothing that was counted as night sleep before changes, but a few past days may read differently now they are counted properly.'
+    ]
+  },
+  {
     version: '1.15.0',
     date: '2026-09-19',
     title: 'Settings of your own, and Insights',
