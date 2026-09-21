@@ -189,9 +189,13 @@
         if (row.key === 'markers' && Array.isArray(row.value)) state.markers = row.value;
         if (me && row.key === PREFS_PREFIX + me) state.prefs = Object.assign(state.prefs, row.value || {});
       });
-      // Names are a nicety: if the table has no display names yet, entries
-      // simply show no chip.
-      var names = await client.from('allowed_users').select('email, display_name');
+      // Names are a nicety: if there are none to be had, entries simply show
+      // no chip. family_names() takes them from the Google profile behind each
+      // account, which the browser cannot read for itself; a database that has
+      // not had supabase/migrations/004_family_names.sql run falls back to
+      // whatever was typed into the table.
+      var names = await client.rpc('family_names');
+      if (names.error) names = await client.from('allowed_users').select('email, display_name');
       if (!names.error && names.data){
         names.data.forEach(function(row){
           if (row.email && row.display_name) state.people[String(row.email).toLowerCase()] = row.display_name;

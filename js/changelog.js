@@ -32,7 +32,8 @@ window.CILLY_CHANGELOG = [
       'Every entry now has a Logged by switch, so when one of you writes up the other’s night the name on it can say so. It starts on whoever is signed in, and only appears once both of you are on the family list.',
       'The consultant log takes any period rather than stopping at 14 days: 3, 7, 14, 30 or 90 days, or everything logged so far. It works the same way as the spreadsheet on the Share tab.',
       'The "5m ago" and "10m before" shortcuts under the sleep times are gone. Nobody used them, and they stood between you and the Save button.',
-      'Tapping the last bar on a chart no longer pushes its label off the side of the screen and leaves the page scrolling sideways.'
+      'Tapping the last bar on a chart no longer pushes its label off the side of the screen and leaves the page scrolling sideways.',
+      'The name on an entry now comes from your Google account where there is one, so neither of you has to set it. A name typed in by hand still wins, and an account with nothing to go on falls back to the front of its email address.'
     ]
   },
   {

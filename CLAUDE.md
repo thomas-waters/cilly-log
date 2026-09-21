@@ -63,6 +63,17 @@ It holds real family records: treat the live data with care.
   and is cached in `localStorage` so the script at the top of `index.html` can
   paint the right palette before the database answers. That cache is also
   seeded into `state.prefs` at startup, or the first render would wipe it.
+- **Names come from Google, not from typing.** `family_names()`
+  (`supabase/migrations/004_family_names.sql`) joins `allowed_users` to
+  `auth.identities` and `auth.users`, which the browser cannot read, and falls
+  back down a chain: a typed `display_name`, then the first word of the Google
+  name, then the name on the user record, then the part of the address before
+  the @. It is `security definer` and gated twice — only people on
+  `allowed_users`, only for callers on it — so it exposes nothing the family
+  list did not already. The store calls it and falls back to selecting the
+  table where the migration has not been run. An account made by the old
+  emailed sign-in link has no Google profile at all, which is why the chain
+  has four links rather than one.
 - **Who logged something is editable.** Every form carries a "Logged by"
   switch (`renderLoggedBy` / `loggedBy`) that sets `createdBy` on the record,
   because one parent writes up the other's night all the time. It starts on
