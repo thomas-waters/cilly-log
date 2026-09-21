@@ -134,5 +134,10 @@ begin
   end loop;
 end $$;
 
--- Who may sign in (lowercase emails). Run one insert per parent in the SQL editor:
---   insert into public.allowed_users (email) values ('name@example.com') on conflict (email) do nothing;
+-- Who may sign in (lowercase emails), and the name shown on what they log.
+-- Run one of these per parent in the SQL editor. The display name is what the
+-- chip on an entry says and what the "Logged by" switch offers, and that
+-- switch only appears once two of them have one:
+--   insert into public.allowed_users (email, display_name)
+--   values (lower('name@example.com'), 'Mum')
+--   on conflict (email) do update set display_name = excluded.display_name;
