@@ -63,6 +63,24 @@ It holds real family records: treat the live data with care.
   and is cached in `localStorage` so the script at the top of `index.html` can
   paint the right palette before the database answers. That cache is also
   seeded into `state.prefs` at startup, or the first render would wipe it.
+- **Names come from Google, not from typing.** `family_names()`
+  (`supabase/migrations/004_family_names.sql`) joins `allowed_users` to
+  `auth.identities` and `auth.users`, which the browser cannot read, and falls
+  back down a chain: a typed `display_name`, then the first word of the Google
+  name, then the name on the user record, then the part of the address before
+  the @. It is `security definer` and gated twice — only people on
+  `allowed_users`, only for callers on it — so it exposes nothing the family
+  list did not already. The store calls it and falls back to selecting the
+  table where the migration has not been run. An account made by the old
+  emailed sign-in link has no Google profile at all, which is why the chain
+  has four links rather than one.
+- **Who logged something is editable.** Every form carries a "Logged by"
+  switch (`renderLoggedBy` / `loggedBy`) that sets `createdBy` on the record,
+  because one parent writes up the other's night all the time. It starts on
+  whoever is signed in and hides itself until two people in `allowed_users`
+  have display names, since there is nothing to choose between before that.
+  Anything new that records something sets `createdBy` from `loggedBy` rather
+  than leaving the store to stamp it.
 - Every page has the same shape: a card at the top opens a form in an overlay
   (`openOverlay` / `closeOverlay`), and saving shows a toast and closes it.
   Each overlay lives inside its own view, so only the current view's can be on
@@ -188,6 +206,23 @@ trips them never reaches the live site. Run them locally before committing.
 - Never drive the live app's UI (clicks or keystrokes) to read or change
   data. Use SQL in the Supabase editor, or ask Thomas. Confirm before any
   write to real data.
+- There may be a **read-only MCP connection to the staging database** on this
+  machine, for running diagnostics without asking Thomas to paste query
+  results. It is `.mcp.json` in the repo root, gitignored because this repo is
+  public, and it is recreated with:
+
+  ```json
+  { "mcpServers": { "supabase-staging": { "type": "http",
+    "url": "https://mcp.supabase.com/mcp?project_ref=<staging ref>&read_only=true" } } }
+  ```
+
+  The staging ref is the first part of the staging `supabaseUrl` in
+  `js/config.js`. Authentication is OAuth through the Supabase account, so no
+  token is ever stored in the repo, in a config file or in a conversation —
+  and no token belongs in any of those places. `read_only=true` and the
+  project scoping are the whole point: **live is not reachable this way and
+  must not be added.** Migrations and anything that writes still go to Thomas
+  as SQL for him to run.
 - The Supabase **secret** key must never appear in the repo, chat or config.
   Only the publishable key belongs in `js/config.js`.
 - Ask before installing software or creating anything public.
@@ -197,6 +232,15 @@ trips them never reaches the live site. Run them locally before committing.
 - Git and GitHub CLI are installed but not on this app's PATH. Call them as
   `C:\Program Files\Git\cmd\git.exe` and `C:\Program Files\GitHub CLI\gh.exe`,
   or prepend both directories to `$env:Path` first (gh needs git on PATH).
+- The desktop app is packaged (MSIX), so `%APPDATA%` inside it redirects to
+  `…\AppData\Local\Packages\Claude_…\LocalCache\Roaming\`. A path that resolves
+  from here will not resolve in a PowerShell window the user opened
+  themselves, and the other way round. The bundled Claude CLI lives at
+  `%LOCALAPPDATA%\Packages\Claude_…\LocalCache\Roaming\Claude\claude-code\<version>\claude.exe`
+  from outside, and at `%APPDATA%\Claude\claude-code\<version>\claude.exe`
+  from in here. Anything interactive — authorising an MCP server, `/mcp` —
+  has to be run by Thomas in the app's Terminal tab, from the project folder,
+  and only takes effect in a session started afterwards.
 - The repo sits inside a Google Drive folder; if git reports lock or index
   errors, Drive sync is the first suspect.
 - Local preview: `python -m http.server 8080 --bind 127.0.0.1` in the repo
@@ -213,3 +257,13 @@ trips them never reaches the live site. Run them locally before committing.
   `.view-milk`, `.view-solids`) overrides `--accent`. Both light and dark
   themes must keep working.
 - Copy is written for a tired parent: short, concrete, no jargon.
+- Nothing may reach past the width of the phone. Anything positioned in
+  script — the chart tooltip is the one so far — is clamped inside its
+  container rather than centred blindly on what it points at, or the page
+  gains a sideways scroll that is very hard to get rid of. Check
+  `document.documentElement.scrollWidth` against `clientWidth` at 375px after
+  touching anything that floats.
+- The sleep form has no time shortcuts. The "5m ago" and "10m before" chips
+  were removed in 1.17.0 after testing showed nobody used them; milk, solids
+  and medicine keep theirs, where they do get used. Do not add them back
+  without evidence.

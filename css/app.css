@@ -498,7 +498,12 @@
     font-weight:600;
     padding:6px 9px;
     border-radius:8px;
-    white-space:nowrap;
+    /* It wraps rather than running off the side of the phone; showTip keeps it
+       inside the chart and moves the arrow instead. */
+    white-space:normal;
+    width:max-content;
+    text-align:center;
+    line-height:1.35;
     pointer-events:none;
     opacity:0;
     transition:opacity .1s ease;
@@ -508,7 +513,7 @@
   .chart-tooltip.visible{ opacity:1; }
   .chart-tooltip::after{
     content:'';
-    position:absolute; left:50%; top:100%;
+    position:absolute; left:var(--arrow, 50%); top:100%;
     transform:translateX(-50%);
     border:5px solid transparent;
     border-top-color:var(--ink);
