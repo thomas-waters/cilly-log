@@ -232,6 +232,15 @@ trips them never reaches the live site. Run them locally before committing.
 - Git and GitHub CLI are installed but not on this app's PATH. Call them as
   `C:\Program Files\Git\cmd\git.exe` and `C:\Program Files\GitHub CLI\gh.exe`,
   or prepend both directories to `$env:Path` first (gh needs git on PATH).
+- The desktop app is packaged (MSIX), so `%APPDATA%` inside it redirects to
+  `…\AppData\Local\Packages\Claude_…\LocalCache\Roaming\`. A path that resolves
+  from here will not resolve in a PowerShell window the user opened
+  themselves, and the other way round. The bundled Claude CLI lives at
+  `%LOCALAPPDATA%\Packages\Claude_…\LocalCache\Roaming\Claude\claude-code\<version>\claude.exe`
+  from outside, and at `%APPDATA%\Claude\claude-code\<version>\claude.exe`
+  from in here. Anything interactive — authorising an MCP server, `/mcp` —
+  has to be run by Thomas in the app's Terminal tab, from the project folder,
+  and only takes effect in a session started afterwards.
 - The repo sits inside a Google Drive folder; if git reports lock or index
   errors, Drive sync is the first suspect.
 - Local preview: `python -m http.server 8080 --bind 127.0.0.1` in the repo
