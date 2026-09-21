@@ -47,7 +47,12 @@ as $$
   where public.is_family();
 $$;
 
-revoke all on function public.family_names() from public;
+-- `anon` is revoked by name as well as by PUBLIC: Supabase grants execute on
+-- functions in this schema to anon by default, and that grant survives a
+-- revoke from PUBLIC. Nothing leaks either way - is_family() is false without
+-- a session, so an anonymous call returns no rows - but a function that reads
+-- auth.users should not be callable at all by someone who has not signed in.
+revoke all on function public.family_names() from public, anon;
 grant execute on function public.family_names() to authenticated;
 
 -- What the app will show. Run this after the function to check it:
