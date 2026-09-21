@@ -12,6 +12,10 @@ desktop.ini
 .vscode/
 .idea/
 .claude/
+# Holds no secret - the project ref is already public in js/config.js - but it
+# points at one family's database, and this repo is public. CLAUDE.md says how
+# to recreate it.
+.mcp.json
 
 # Future tooling
 node_modules/

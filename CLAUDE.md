@@ -206,6 +206,23 @@ trips them never reaches the live site. Run them locally before committing.
 - Never drive the live app's UI (clicks or keystrokes) to read or change
   data. Use SQL in the Supabase editor, or ask Thomas. Confirm before any
   write to real data.
+- There may be a **read-only MCP connection to the staging database** on this
+  machine, for running diagnostics without asking Thomas to paste query
+  results. It is `.mcp.json` in the repo root, gitignored because this repo is
+  public, and it is recreated with:
+
+  ```json
+  { "mcpServers": { "supabase-staging": { "type": "http",
+    "url": "https://mcp.supabase.com/mcp?project_ref=<staging ref>&read_only=true" } } }
+  ```
+
+  The staging ref is the first part of the staging `supabaseUrl` in
+  `js/config.js`. Authentication is OAuth through the Supabase account, so no
+  token is ever stored in the repo, in a config file or in a conversation —
+  and no token belongs in any of those places. `read_only=true` and the
+  project scoping are the whole point: **live is not reachable this way and
+  must not be added.** Migrations and anything that writes still go to Thomas
+  as SQL for him to run.
 - The Supabase **secret** key must never appear in the repo, chat or config.
   Only the publishable key belongs in `js/config.js`.
 - Ask before installing software or creating anything public.
