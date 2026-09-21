@@ -63,6 +63,13 @@ It holds real family records: treat the live data with care.
   and is cached in `localStorage` so the script at the top of `index.html` can
   paint the right palette before the database answers. That cache is also
   seeded into `state.prefs` at startup, or the first render would wipe it.
+- **Who logged something is editable.** Every form carries a "Logged by"
+  switch (`renderLoggedBy` / `loggedBy`) that sets `createdBy` on the record,
+  because one parent writes up the other's night all the time. It starts on
+  whoever is signed in and hides itself until two people in `allowed_users`
+  have display names, since there is nothing to choose between before that.
+  Anything new that records something sets `createdBy` from `loggedBy` rather
+  than leaving the store to stamp it.
 - Every page has the same shape: a card at the top opens a form in an overlay
   (`openOverlay` / `closeOverlay`), and saving shows a toast and closes it.
   Each overlay lives inside its own view, so only the current view's can be on
@@ -213,3 +220,13 @@ trips them never reaches the live site. Run them locally before committing.
   `.view-milk`, `.view-solids`) overrides `--accent`. Both light and dark
   themes must keep working.
 - Copy is written for a tired parent: short, concrete, no jargon.
+- Nothing may reach past the width of the phone. Anything positioned in
+  script — the chart tooltip is the one so far — is clamped inside its
+  container rather than centred blindly on what it points at, or the page
+  gains a sideways scroll that is very hard to get rid of. Check
+  `document.documentElement.scrollWidth` against `clientWidth` at 375px after
+  touching anything that floats.
+- The sleep form has no time shortcuts. The "5m ago" and "10m before" chips
+  were removed in 1.17.0 after testing showed nobody used them; milk, solids
+  and medicine keep theirs, where they do get used. Do not add them back
+  without evidence.

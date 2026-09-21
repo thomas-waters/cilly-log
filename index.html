@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#5B54D6">
   <title>Cilly Log</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
-  <link rel="stylesheet" href="css/app.css?v=20260920-2240">
+  <link rel="stylesheet" href="css/app.css?v=20260921-2218">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -344,35 +344,10 @@
             <input type="time" id="f-start">
           </div>
         </div>
-        <div class="chips" id="chips-start" data-target="f-start" hidden>
-          <span class="chips-label">Asleep</span>
-          <button type="button" class="chip" data-minutes="0">Now</button>
-          <button type="button" class="chip" data-minutes="5">5m ago</button>
-          <button type="button" class="chip" data-minutes="10">10m ago</button>
-          <button type="button" class="chip" data-minutes="20">20m ago</button>
-          <button type="button" class="chip" data-minutes="30">30m ago</button>
-        </div>
-        <div class="chips" id="chips-putdown" hidden>
-          <span class="chips-label">Put down</span>
-          <button type="button" class="chip" data-before="0">Same time</button>
-          <button type="button" class="chip" data-before="5">5m before</button>
-          <button type="button" class="chip" data-before="10">10m before</button>
-          <button type="button" class="chip" data-before="15">15m before</button>
-          <button type="button" class="chip" data-before="20">20m before</button>
-          <button type="button" class="chip" data-before="30">30m before</button>
-        </div>
         <p class="form-hint" id="f-putdown-hint" hidden>Optional, but a put-down time is what gives you the settling figures.</p>
         <div class="field" id="field-end">
           <label for="f-end">Woke at</label>
           <input type="time" id="f-end">
-        </div>
-        <div class="chips" id="chips-end" data-target="f-end" hidden>
-          <span class="chips-label">Woke</span>
-          <button type="button" class="chip" data-minutes="0">Now</button>
-          <button type="button" class="chip" data-minutes="5">5m ago</button>
-          <button type="button" class="chip" data-minutes="10">10m ago</button>
-          <button type="button" class="chip" data-minutes="20">20m ago</button>
-          <button type="button" class="chip" data-minutes="30">30m ago</button>
         </div>
         <div class="field" id="field-settle">
           <label for="f-settle">How did settling go?</label>
@@ -381,6 +356,10 @@
         <div class="field" id="field-wake">
           <label for="f-wake">How did waking go?</label>
           <textarea id="f-wake" rows="2" placeholder="Woke happy, needed a cuddle, hungry straight away..."></textarea>
+        </div>
+        <div class="field" id="entry-by" hidden>
+          <span class="field-label" id="entry-by-label">Logged by</span>
+          <div class="unit-toggle basis-toggle by-group" id="entry-by-group" data-form="entry" role="group" aria-labelledby="entry-by-label"></div>
         </div>
         <p class="form-error" id="form-error" hidden></p>
         <div class="form-actions">
@@ -478,6 +457,10 @@
           <label for="m-notes">Notes</label>
           <textarea id="m-notes" rows="2" placeholder="Took it all, spat up a little, dozed off halfway..."></textarea>
         </div>
+        <div class="field" id="milk-by" hidden>
+          <span class="field-label" id="milk-by-label">Logged by</span>
+          <div class="unit-toggle basis-toggle by-group" id="milk-by-group" data-form="milk" role="group" aria-labelledby="milk-by-label"></div>
+        </div>
         <p class="form-error" id="m-error" hidden></p>
         <div class="form-actions">
           <button type="button" class="btn danger" id="m-delete" hidden>Delete</button>
@@ -565,6 +548,10 @@
         <div class="field">
           <label for="s-notes">Notes</label>
           <textarea id="s-notes" rows="2" placeholder="Loved it, gagged on lumps, only a few spoons..."></textarea>
+        </div>
+        <div class="field" id="solid-by" hidden>
+          <span class="field-label" id="solid-by-label">Logged by</span>
+          <div class="unit-toggle basis-toggle by-group" id="solid-by-group" data-form="solid" role="group" aria-labelledby="solid-by-label"></div>
         </div>
         <p class="form-error" id="s-error" hidden></p>
         <div class="form-actions">
@@ -691,6 +678,10 @@
           <label for="md-notes">Notes</label>
           <textarea id="md-notes" rows="2" placeholder="Temperature 38.2, took it fine, brought some back up..."></textarea>
         </div>
+        <div class="field" id="med-by" hidden>
+          <span class="field-label" id="med-by-label">Logged by</span>
+          <div class="unit-toggle basis-toggle by-group" id="med-by-group" data-form="med" role="group" aria-labelledby="med-by-label"></div>
+        </div>
         <p class="form-error" id="md-error" hidden></p>
         <div class="form-actions">
           <button type="button" class="btn danger" id="md-delete" hidden>Delete</button>
@@ -720,12 +711,15 @@
     </header>
 
     <div class="field no-print">
-      <span class="field-label" id="report-range-label">Days</span>
-      <div class="unit-toggle basis-toggle" id="report-range" role="group" aria-labelledby="report-range-label">
-        <button type="button" class="unit-btn" data-days="3" aria-pressed="true">3</button>
-        <button type="button" class="unit-btn" data-days="7" aria-pressed="false">7</button>
-        <button type="button" class="unit-btn" data-days="14" aria-pressed="false">14</button>
-      </div>
+      <label for="report-range">Period</label>
+      <select id="report-range">
+        <option value="3" selected>Last 3 days</option>
+        <option value="7">Last 7 days</option>
+        <option value="14">Last 14 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="90">Last 90 days</option>
+        <option value="0">Everything</option>
+      </select>
       <p class="form-hint" id="report-hint"></p>
     </div>
 
@@ -1021,11 +1015,11 @@
 
 <div class="toast" id="toast" hidden></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/config.js?v=20260920-2240"></script>
-<script src="js/store.js?v=20260920-2240"></script>
-<script src="js/docx.js?v=20260920-2240"></script>
-<script src="js/changelog.js?v=20260920-2240"></script>
-<script src="js/sleep-model.js?v=20260920-2240"></script>
-<script src="js/app.js?v=20260920-2240"></script>
+<script src="js/config.js?v=20260921-2218"></script>
+<script src="js/store.js?v=20260921-2218"></script>
+<script src="js/docx.js?v=20260921-2218"></script>
+<script src="js/changelog.js?v=20260921-2218"></script>
+<script src="js/sleep-model.js?v=20260921-2218"></script>
+<script src="js/app.js?v=20260921-2218"></script>
 </body>
 </html>

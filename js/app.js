@@ -349,6 +349,35 @@
     return name ? '<span class="who-chip">' + escapeHtml(name) + '</span>' : '';
   }
 
+  // ---------- who logged it ----------
+  // One parent writes up the other's night all the time: the 3am feed logged
+  // at breakfast, the nap the other one sat through. The chip on an entry says
+  // who did it, so it has to be possible to say it was the other one. It
+  // starts on whoever is signed in, and the row only appears when there is
+  // somebody else on the family list it could have been.
+  function knownPeople(){
+    var people = state.people || {}, me = state.me || '';
+    return Object.keys(people)
+      .filter(function(email){ return people[email]; })
+      .sort(function(a, b){ return a === me ? -1 : b === me ? 1 : (a < b ? -1 : 1); });
+  }
+  var loggedByDraft = {};
+  function renderLoggedBy(form, email){
+    var wrap = el(form + '-by'), group = el(form + '-by-group');
+    var people = knownPeople();
+    var chosen = email && people.indexOf(String(email).toLowerCase()) >= 0
+      ? String(email).toLowerCase()
+      : (state.me || people[0] || '');
+    loggedByDraft[form] = chosen;
+    wrap.hidden = people.length < 2;
+    if (wrap.hidden) return;
+    group.innerHTML = people.map(function(p){
+      return '<button type="button" class="unit-btn" data-by="' + escapeHtml(p) + '" aria-pressed="' +
+        (p === chosen ? 'true' : 'false') + '">' + escapeHtml(state.people[p]) + '</button>';
+    }).join('');
+  }
+  function loggedBy(form){ return loggedByDraft[form] || state.me || ''; }
+
   function sleepMetaHtml(e){
     var bits = [];
     if (isNight(e)) bits.push('<span class="meta-tag">Night</span>');
@@ -1718,10 +1747,17 @@
   }
 
   // Every event in the window, oldest first, so the log reads as a diary.
-  function reportEvents(days){
+  // Zero days means everything ever, the same as the spreadsheet: no cutoff at
+  // all rather than a cutoff of today.
+  function reportCutoff(days){
+    if (!days) return null;
     var cutoff = new Date();
     cutoff.setHours(0, 0, 0, 0);
     cutoff.setDate(cutoff.getDate() - (days - 1));
+    return cutoff;
+  }
+  function reportEvents(days){
+    var cutoff = reportCutoff(days) || new Date(0);
     var out = [];
     state.entries.forEach(function(e){
       var at = entryStart(e);
@@ -1768,11 +1804,15 @@
     });
   }
   function reportSubtitle(days){
-    var first = new Date();
-    first.setDate(first.getDate() - (days - 1));
+    var today = new Date();
+    var events = reportEvents(days);
+    // Everything ever starts at the first thing logged, not at a date picked
+    // from the calendar, so the heading matches what is in the table.
+    var first = days ? new Date(today.getTime() - (days - 1) * 86400000)
+      : (events.length ? events[0].at : today);
+    var span = days ? ', ' + plural(days, 'day') + '.' : '.';
     return first.toLocaleDateString(undefined, { day: 'numeric', month: 'long' }) +
-      ' to ' + new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) +
-      ', ' + plural(days, 'day') + '.';
+      ' to ' + today.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) + span;
   }
   var REPORT_TAIL = [
     { text: 'Questions, concerns and observations', bold: true },
@@ -1794,15 +1834,11 @@
   }
 
   function renderReport(){
-    Array.prototype.forEach.call(el('report-range').querySelectorAll('.unit-btn'), function(btn){
-      btn.setAttribute('aria-pressed', Number(btn.dataset.days) === reportDays ? 'true' : 'false');
-    });
+    el('report-range').value = String(reportDays);
     el('report-body').innerHTML = buildReportHtml(reportDays);
-    var cutoff = new Date();
-    cutoff.setHours(0, 0, 0, 0);
-    cutoff.setDate(cutoff.getDate() - (reportDays - 1));
+    var cutoff = reportCutoff(reportDays);
     var missing = state.entries.filter(function(e){
-      return entryStart(e) >= cutoff && !e.settleNotes && !e.wakeNotes;
+      return (!cutoff || entryStart(e) >= cutoff) && !e.settleNotes && !e.wakeNotes;
     }).length;
     el('report-hint').textContent = missing
       ? plural(missing, 'sleep') + ' in this stretch ' + (missing === 1 ? 'has' : 'have') +
@@ -1812,10 +1848,8 @@
   }
 
   el('report-btn').addEventListener('click', function(){ goTo('report'); renderReport(); });
-  el('report-range').addEventListener('click', function(ev){
-    var btn = ev.target.closest('.unit-btn');
-    if (!btn) return;
-    reportDays = Number(btn.dataset.days);
+  el('report-range').addEventListener('change', function(){
+    reportDays = Number(el('report-range').value) || 0;
     renderReport();
   });
   el('report-print').addEventListener('click', function(){ window.print(); });
@@ -2132,9 +2166,21 @@
       group.classList.add('is-active');
       tooltip.textContent = d.tip;
       var r = group.getBoundingClientRect(), w = wrap.getBoundingClientRect();
-      tooltip.style.left = (r.left - w.left + r.width / 2) + 'px';
-      tooltip.style.top = (r.top - w.top - 6) + 'px';
+      // A tooltip centred on the last bar used to hang off the side of the
+      // phone and give the whole page something to scroll sideways into. It is
+      // held inside the chart instead, with the arrow left pointing at the bar
+      // it belongs to.
+      tooltip.style.maxWidth = Math.max(140, Math.round(w.width - 8)) + 'px';
+      tooltip.style.left = '0px';
       tooltip.classList.add('visible');
+      var half = tooltip.offsetWidth / 2;
+      var centre = r.left - w.left + r.width / 2;
+      var left = Math.min(Math.max(centre, half + 4), Math.max(half + 4, w.width - half - 4));
+      tooltip.style.left = Math.round(left) + 'px';
+      tooltip.style.top = (r.top - w.top - 6) + 'px';
+      // Keep the arrow within the bubble's own corners.
+      var arrow = Math.min(Math.max(centre - left + half, 10), Math.max(10, tooltip.offsetWidth - 10));
+      tooltip.style.setProperty('--arrow', Math.round(arrow) + 'px');
     }
     Array.prototype.forEach.call(wrap.querySelectorAll('.chart-bar-group'), function(group){
       var i = Number(group.getAttribute('data-i'));
@@ -2272,9 +2318,10 @@
     el('field-date').hidden = isStart;
     el('field-end').hidden = isStart;
     el('field-wake').hidden = isStart;
-    el('chips-start').hidden = !isStart;
-    el('chips-end').hidden = !isWake;
-    el('chips-putdown').hidden = !(isStart || isWake);
+    // The "5m ago" and "10m before" shortcuts that used to sit under these
+    // times are gone: testing showed nobody used them, and they were the
+    // biggest thing between a tired parent and the Save button. The milk,
+    // solids and medicine forms keep theirs, where they do get used.
     renderPutDownHint();
 
     var danger = el('f-danger');
@@ -2345,6 +2392,7 @@
       el('f-end').value = e.end;
       el('f-settle').value = e.settleNotes || e.notes || '';
       el('f-wake').value = e.wakeNotes || '';
+      renderLoggedBy('entry', e.createdBy);
     } else {
       el('form-title').textContent = 'Log a sleep session';
       el('entry-id').value = '';
@@ -2354,6 +2402,7 @@
       el('f-end').value = '';
       el('f-settle').value = '';
       el('f-wake').value = '';
+      renderLoggedBy('entry', '');
     }
     applyMode();
     openPanel();
@@ -2438,7 +2487,8 @@
       end: end,
       putDown: el('f-putdown').value,
       settleNotes: el('f-settle').value.trim(),
-      wakeNotes: el('f-wake').value.trim()
+      wakeNotes: el('f-wake').value.trim(),
+      createdBy: loggedBy('entry')
     };
     var ops = [{ type: 'upsert', collection: 'entries', record: entry }];
     if (formMode === 'wake') ops.push({ type: 'status', status: { asleep: false, since: null, settleNotes: '' } });
@@ -2536,6 +2586,7 @@
     el('m-title').textContent = 'Log a feed';
     el('m-submit').textContent = 'Add feed';
     el('m-delete').hidden = true;
+    renderLoggedBy('milk', '');
     setBottleFields();
     renderUnitControls();
     hideError('m-error');
@@ -2565,6 +2616,7 @@
     el('m-title').textContent = 'Edit feed';
     el('m-submit').textContent = 'Save';
     el('m-delete').hidden = false;
+    renderLoggedBy('milk', f.createdBy);
     setBottleFields();
     renderUnitControls();
     hideError('m-error');
@@ -2656,7 +2708,8 @@
       time: time,
       kind: isBottle ? 'bottle' : 'breast',
       amountMl: amountMl,
-      notes: el('m-notes').value.trim()
+      notes: el('m-notes').value.trim(),
+      createdBy: loggedBy('milk')
     };
     showToast(el('m-id').value ? 'Feed updated' : feedTitle(feed) + ' logged at ' + fmtTime(atDate(feed)));
     closeMilkForm();
@@ -2741,6 +2794,7 @@
     el('s-title').textContent = 'Log a meal';
     el('s-submit').textContent = 'Add meal';
     el('s-delete').hidden = true;
+    renderLoggedBy('solid', '');
     hideError('s-error');
     renderFoodHelpers();
     clearDraft('solid-form');
@@ -2769,6 +2823,7 @@
     el('s-title').textContent = 'Edit meal';
     el('s-submit').textContent = 'Save';
     el('s-delete').hidden = false;
+    renderLoggedBy('solid', s.createdBy);
     hideError('s-error');
     renderFoodHelpers();
     snapshotForm('solid-form');
@@ -2873,7 +2928,8 @@
       date: date,
       time: time,
       foods: solidDraftFoods.slice(),
-      notes: el('s-notes').value.trim()
+      notes: el('s-notes').value.trim(),
+      createdBy: loggedBy('solid')
     };
     showToast(el('s-id').value ? 'Meal updated' : meal.foods.join(', ') + ' logged');
     closeSolidForm();
@@ -2955,6 +3011,7 @@
     el('med-title').textContent = 'Log a dose';
     el('md-submit').textContent = 'Add dose';
     el('md-delete').hidden = true;
+    renderLoggedBy('med', '');
     medDraftGap = 240;
     renderMedHelpers();
     hideError('md-error');
@@ -2983,6 +3040,7 @@
     el('med-title').textContent = 'Edit dose';
     el('md-submit').textContent = 'Save';
     el('md-delete').hidden = false;
+    renderLoggedBy('med', m.createdBy);
     medDraftGap = m.gapMin || 0;
     renderMedHelpers();
     hideError('md-error');
@@ -3110,7 +3168,8 @@
       name: name,
       dose: doseMl === null ? '' : String(doseMl),
       gapMin: medDraftGap || null,
-      notes: el('md-notes').value.trim()
+      notes: el('md-notes').value.trim(),
+      createdBy: loggedBy('med')
     };
     showToast(el('md-id').value ? 'Dose updated' : medTitle(med) + ' logged at ' + fmtTime(atDate(med)));
     closeMedForm();
@@ -3594,6 +3653,16 @@
       return;
     }
 
+    var by = target.closest('[data-by]');
+    if (by){
+      var byGroup = by.closest('.by-group');
+      loggedByDraft[byGroup.dataset.form] = by.getAttribute('data-by');
+      Array.prototype.forEach.call(byGroup.querySelectorAll('.unit-btn'), function(b){
+        b.setAttribute('aria-pressed', b === by ? 'true' : 'false');
+      });
+      return;
+    }
+
     var chip = target.closest('.chip');
     if (chip){
       var row = chip.closest('.chips');
@@ -3602,12 +3671,6 @@
         el(row.getAttribute('data-target')).value = timeValue(new Date(Date.now() - minutes * 60000));
       } else if (chip.hasAttribute('data-amount') && row){
         el(row.getAttribute('data-target')).value = chip.getAttribute('data-amount');
-      } else if (chip.hasAttribute('data-before')){
-        var before = Number(chip.getAttribute('data-before'));
-        var startVal = el('f-start').value;
-        var base = startVal ? timeToDateNear(startVal, new Date()) : new Date();
-        el('f-putdown').value = timeValue(new Date(base.getTime() - before * 60000));
-        renderPutDownHint();
       } else if (chip.hasAttribute('data-food')){
         addDraftFood(chip.getAttribute('data-food'));
       } else if (chip.hasAttribute('data-med')){
