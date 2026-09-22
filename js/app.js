@@ -5,13 +5,14 @@
     bottle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M10 2.5h4v2.5h-4z"/><path d="M9 5h6l1.5 3h-9z"/><path d="M8 8h8v10.5A2.5 2.5 0 0 1 13.5 21h-3A2.5 2.5 0 0 1 8 18.5z"/><path d="M8 12h8M8 15.5h8"/></svg>',
     bowl: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M3 11h18a9 9 0 0 1-18 0z"/><path d="M8 11c0-3 1.6-5 4-5s4 2 4 5"/><path d="M6 20h12"/></svg>'
   };
+  ICON.apple = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M12 8.5c-1-1.4-2.5-2-4-1.6C6 7.4 4.6 9.3 4.6 12c0 3.4 2.2 7 4.3 7 .9 0 1.6-.3 2.2-.6.6-.3 1.2-.3 1.8 0 .6.3 1.3.6 2.2.6 2.1 0 4.3-3.6 4.3-7 0-2.7-1.4-4.6-3.4-5.1-1.5-.4-3 .2-4 1.6z"/><path d="M12 8.5V5.8"/><path d="M12 5.8c1.2 0 2.2-1 2.2-2.3-1.2 0-2.2 1-2.2 2.3z"/></svg>';
   ICON.pill = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="2.5" y="8.5" width="19" height="7" rx="3.5"/><path d="M12 8.5v7"/></svg>';
-  var TYPE_ICON = { sleep: ICON.moon, milk: ICON.bottle, solids: ICON.bowl, meds: ICON.pill };
+  var TYPE_ICON = { sleep: ICON.moon, milk: ICON.bottle, solids: ICON.bowl, snack: ICON.apple, meds: ICON.pill };
 
   // Features that can be switched off in js/config.js. Off means the pages,
   // tiles and entries for that feature are simply not there.
   var FEATURES = Object.assign(
-    { medicine: false, nightMode: false },
+    { medicine: false, nightMode: false, snacks: false },
     (window.CILLY_CONFIG || {}).features || {}
   );
   function applyFeatureFlags(){
@@ -21,14 +22,18 @@
     Array.prototype.forEach.call(document.querySelectorAll('.feature-night'), function(node){
       node.hidden = !FEATURES.nightMode;
     });
+    Array.prototype.forEach.call(document.querySelectorAll('.feature-snacks'), function(node){
+      node.hidden = !FEATURES.snacks;
+    });
   }
-  var VIEWS = ['home', 'sleep', 'milk', 'solids', 'meds', 'summary', 'report'];
+  var VIEWS = ['home', 'sleep', 'milk', 'solids', 'snacks', 'meds', 'summary', 'report'];
   var DRAFT_KEY = 'cilly.draft', VIEW_KEY = 'cilly.view';
   var DRAFT_MAX_AGE = 30 * 60000;
   var FORM_FIELDS = {
     'entry-form': ['entry-id', 'f-date', 'f-putdown', 'f-start', 'f-end', 'f-settle', 'f-wake'],
     'milk-form': ['m-id', 'm-date', 'm-time', 'm-amount', 'm-notes'],
     'solid-form': ['s-id', 's-date', 's-time', 's-food', 's-notes'],
+    'snack-form': ['sn-id', 'sn-date', 'sn-time', 'sn-food', 'sn-notes'],
     'med-form': ['md-id', 'md-date', 'md-time', 'md-name', 'md-dose', 'md-notes']
   };
 
@@ -449,7 +454,7 @@
   // Each one lives inside its own view, so only the current view's can show.
   // The confirm is first: it opens over the others, so Escape should reach it
   // before the form underneath.
-  var OVERLAYS = ['confirm-overlay', 'changelog-overlay', 'settings-overlay', 'sources-overlay', 'marker-overlay', 'day-overlay', 'entry-overlay', 'milk-overlay', 'solid-overlay', 'med-overlay'];
+  var OVERLAYS = ['confirm-overlay', 'changelog-overlay', 'settings-overlay', 'sources-overlay', 'marker-overlay', 'day-overlay', 'entry-overlay', 'milk-overlay', 'solid-overlay', 'snack-overlay', 'med-overlay'];
   function openOverlay(id){
     el(id).hidden = false;
   }
@@ -575,6 +580,7 @@
 
   function viewAllowed(v){
     if (v === 'meds') return !!FEATURES.medicine;
+    if (v === 'snacks') return !!FEATURES.snacks;
     return VIEWS.indexOf(v) >= 0;
   }
   function restoreView(){
@@ -587,6 +593,7 @@
     if (kind === 'sleep'){ goTo('sleep'); openForm(id); }
     else if (kind === 'milk'){ editMilk(id, false); }
     else if (kind === 'solids'){ editSolid(id, false); }
+    else if (kind === 'snack'){ editSnack(id, false); }
     else if (kind === 'meds'){ editMed(id, false); }
     // Markers are edited where they are listed, on the Calendar tab, so this
     // one does not move the page first.
@@ -606,8 +613,12 @@
       entry.open = !el('entry-overlay').hidden;
     }
     if (formId === 'solid-form'){
-      entry.foods = solidDraftFoods.slice();
+      entry.foods = draftFoods.solid.slice();
       entry.open = !el('solid-overlay').hidden;
+    }
+    if (formId === 'snack-form'){
+      entry.foods = draftFoods.snack.slice();
+      entry.open = !el('snack-overlay').hidden;
     }
     if (formId === 'milk-form'){
       entry.bottle = el('m-bottle').checked;
@@ -685,7 +696,8 @@
       var solidId = so.fields['s-id'];
       if (!solidId || editSolid(solidId, true)){
         setFields(so.fields);
-        solidDraftFoods = (so.foods || []).slice();
+        draftFoods.solid = (so.foods || []).slice();
+        foodForm = 'solid';
         renderFoodHelpers();
         if (so.open) openOverlay('solid-overlay');
         snapshotForm('solid-form');
@@ -726,6 +738,7 @@
     renderSleep();
     renderMilk();
     renderSolids();
+    renderSnacks();
     renderMeds();
     renderHome();
     renderSummary();
@@ -764,7 +777,7 @@
     var set = {};
     keys.forEach(function(k){ set[k] = true; });
     var longestNightMs = 0;
-    var sleepByDay = {}, feedsByDay = {}, mealsByDay = {};
+    var sleepByDay = {}, feedsByDay = {}, mealsByDay = {}, snacksByDay = {};
 
     state.entries.forEach(function(e){
       var key = sleepDayKey(e);
@@ -779,7 +792,9 @@
     });
     state.solids.forEach(function(s){
       if (!set[s.date]) return;
-      mealsByDay[s.date] = (mealsByDay[s.date] || 0) + 1;
+      // A snack is not a meal. That is the whole point of it having a page.
+      if (isSnack(s)) snacksByDay[s.date] = (snacksByDay[s.date] || 0) + 1;
+      else mealsByDay[s.date] = (mealsByDay[s.date] || 0) + 1;
     });
 
     var sleep = averageOver(sleepByDay), milk = averageOver(feedsByDay), meals = averageOver(mealsByDay);
@@ -985,15 +1000,18 @@
   }
 
   function dayTotals(key){
-    var night = 0, naps = 0, feeds = 0, meals = 0;
+    var night = 0, naps = 0, feeds = 0, meals = 0, snacks = 0;
     state.entries.forEach(function(e){
       if (sleepDayKey(e) !== key) return;
       var dur = entryEnd(e) - entryStart(e);
       if (isNight(e)) night += dur; else naps += dur;
     });
     state.feeds.forEach(function(f){ if (f.date === key) feeds++; });
-    state.solids.forEach(function(s){ if (s.date === key) meals++; });
-    return { key: key, night: night, naps: naps, feeds: feeds, meals: meals };
+    state.solids.forEach(function(s){
+      if (s.date !== key) return;
+      if (isSnack(s)) snacks++; else meals++;
+    });
+    return { key: key, night: night, naps: naps, feeds: feeds, meals: meals, snacks: snacks };
   }
 
   function renderDayTable(){
@@ -1015,7 +1033,8 @@
           night: logged ? sum(function(d){ return d.night; }) / logged : 0,
           naps: logged ? sum(function(d){ return d.naps; }) / logged : 0,
           feeds: logged ? sum(function(d){ return d.feeds; }) / logged : 0,
-          meals: logged ? sum(function(d){ return d.meals; }) / logged : 0
+          meals: logged ? sum(function(d){ return d.meals; }) / logged : 0,
+          snacks: logged ? sum(function(d){ return d.snacks; }) / logged : 0
         });
       }
       return out;
@@ -1035,9 +1054,10 @@
       naps: columnAverage(function(r){ return r.naps; }),
       total: columnAverage(function(r){ return r.night + r.naps; }),
       feeds: columnAverage(function(r){ return r.feeds; }),
-      meals: columnAverage(function(r){ return r.meals; })
+      meals: columnAverage(function(r){ return r.meals; }),
+      snacks: columnAverage(function(r){ return r.snacks; })
     };
-    var loggedDays = days.filter(function(r){ return r.night + r.naps + r.feeds + r.meals > 0; }).length;
+    var loggedDays = days.filter(function(r){ return r.night + r.naps + r.feeds + r.meals + r.snacks > 0; }).length;
     var count = function(v){ return v ? (byWeek ? Math.round(v * 10) / 10 : v) : '—'; };
 
     var body = rows.map(function(r){
@@ -1048,13 +1068,15 @@
         '<td>' + ((r.night + r.naps) ? fmtDur(r.night + r.naps) : '—') + '</td>' +
         '<td>' + count(r.feeds) + '</td>' +
         '<td>' + count(r.meals) + '</td>' +
+        (FEATURES.snacks ? '<td>' + count(r.snacks) + '</td>' : '') +
       '</tr>';
     }).join('');
 
     el('day-table-heading').textContent = byWeek ? 'Week by week' : 'Day by day';
     el('day-table-range').textContent = 'Last ' + (byWeek ? (summaryDays / 7) + ' weeks' : '7 days');
     el('day-table').innerHTML =
-      '<thead><tr><th>' + (byWeek ? 'Week' : 'Day') + '</th><th>Night</th><th>Naps</th><th>Total</th><th>Feeds</th><th>Meals</th></tr></thead>' +
+      '<thead><tr><th>' + (byWeek ? 'Week' : 'Day') + '</th><th>Night</th><th>Naps</th><th>Total</th><th>Feeds</th><th>Meals</th>' +
+        (FEATURES.snacks ? '<th>Snacks</th>' : '') + '</tr></thead>' +
       '<tbody>' + body + '</tbody>' +
       '<tfoot><tr>' +
         '<td>Average</td>' +
@@ -1063,6 +1085,7 @@
         '<td>' + (avg.total ? fmtDur(avg.total) : '—') + '</td>' +
         '<td>' + (avg.feeds ? Math.round(avg.feeds * 10) / 10 : '—') + '</td>' +
         '<td>' + (avg.meals ? Math.round(avg.meals * 10) / 10 : '—') + '</td>' +
+        (FEATURES.snacks ? '<td>' + (avg.snacks ? Math.round(avg.snacks * 10) / 10 : '—') + '</td>' : '') +
       '</tr></tfoot>';
 
     el('day-table-note').textContent =
@@ -1602,6 +1625,7 @@
       '<tr><td>Total in 24h</td><td>' + ((totals.night + totals.naps) ? fmtDur(totals.night + totals.naps) : '—') + '</td></tr>' +
       '<tr><td>Feeds</td><td>' + (totals.feeds || '—') + '</td></tr>' +
       '<tr><td>Meals</td><td>' + (totals.meals || '—') + '</td></tr>' +
+      (FEATURES.snacks ? '<tr><td>Snacks</td><td>' + (totals.snacks || '—') + '</td></tr>' : '') +
       '</tbody>';
 
     el('day-sleeps').innerHTML = sleeps.length
@@ -1674,7 +1698,7 @@
     });
     state.solids.forEach(function(s){
       if (cutoff && s.date < cutoff) return;
-      rows.push(['Solids', s.date, s.time, '', '', '', '', '', '', (s.foods || []).join('; '), '', '', s.notes || '', personName(s)]);
+      rows.push([isSnack(s) ? 'Snack' : 'Solids', s.date, s.time, '', '', '', '', '', '', (s.foods || []).join('; '), '', '', s.notes || '', personName(s)]);
     });
     if (FEATURES.medicine){
       state.meds.forEach(function(m){
@@ -1736,8 +1760,8 @@
         ? 'Bottle' + (e.amountMl == null ? '.' : ', ' + fmtAmount(e) + '.')
         : 'Breast feed.');
       if (e.notes) parts.push(e.notes);
-    } else if (kind === 'solids'){
-      parts.push('Solids: ' + ((e.foods || []).join(', ') || 'not listed') + '.');
+    } else if (kind === 'solids' || kind === 'snack'){
+      parts.push((kind === 'snack' ? 'Snack: ' : 'Solids: ') + ((e.foods || []).join(', ') || 'not listed') + '.');
       if (e.notes) parts.push(e.notes);
     } else if (kind === 'meds'){
       parts.push(medTitle(e) + '.');
@@ -1770,7 +1794,8 @@
     });
     state.solids.forEach(function(s){
       var at = atDate(s);
-      if (at >= cutoff) out.push({ at: at, kind: 'solids', when: fmtTime(at), text: reportLines(s, 'solids') });
+      if (at >= cutoff) out.push({ at: at, kind: isSnack(s) ? 'snack' : 'solids', when: fmtTime(at),
+        text: reportLines(s, isSnack(s) ? 'snack' : 'solids') });
     });
     if (FEATURES.medicine){
       state.meds.forEach(function(m){
@@ -2739,7 +2764,18 @@
   // ======================================================
   // SOLIDS
   // ======================================================
-  var solidDraftFoods = [];
+  // Meals and snacks are the same record with a different label, so they share
+  // the food machinery: one list of known foods, one set of chips, and only
+  // ever one of the two forms open at a time.
+  var draftFoods = { solid: [], snack: [] };
+  var foodForm = 'solid';
+  var FOOD_IDS = {
+    solid: { tags: 's-tags', recent: 's-recent', form: 'solid-form' },
+    snack: { tags: 'sn-tags', recent: 'sn-recent', form: 'snack-form' }
+  };
+  function isSnack(s){ return s && s.kind === 'snack'; }
+  function mealsOnly(list){ return list.filter(function(s){ return !isSnack(s); }); }
+  function snacksOnly(list){ return list.filter(isSnack); }
 
   function knownFoods(){
     var seen = {}, out = [];
@@ -2755,37 +2791,44 @@
   function addDraftFood(raw){
     var food = String(raw || '').trim().replace(/\s+/g, ' ');
     if (!food) return false;
-    var exists = solidDraftFoods.some(function(f){ return f.toLowerCase() === food.toLowerCase(); });
-    if (!exists) solidDraftFoods.push(food);
+    var list = draftFoods[foodForm];
+    var exists = list.some(function(f){ return f.toLowerCase() === food.toLowerCase(); });
+    if (!exists) list.push(food);
     renderFoodHelpers();
-    snapshotForm('solid-form');
+    snapshotForm(FOOD_IDS[foodForm].form);
     return true;
   }
 
   function removeDraftFood(index){
-    solidDraftFoods.splice(index, 1);
+    draftFoods[foodForm].splice(index, 1);
     renderFoodHelpers();
-    snapshotForm('solid-form');
+    snapshotForm(FOOD_IDS[foodForm].form);
   }
 
-  function renderFoodHelpers(){
+  function renderFoodHelpers(form){
     var known = knownFoods();
-    el('s-tags').innerHTML = solidDraftFoods.map(function(f, i){
+    // Defaults to whichever form is open, but a re-render triggered by saving
+    // passes its own: renderSolids must not repoint the chips at the meal form
+    // while the snack form is on screen.
+    var which = form || foodForm;
+    var ids = FOOD_IDS[which], list = draftFoods[which];
+    el(ids.tags).innerHTML = list.map(function(f, i){
       return '<span class="tag"><span>' + escapeHtml(f) + '</span><button type="button" data-remove-food="' + i + '" aria-label="Remove ' + escapeHtml(f) + '">&times;</button></span>';
     }).join('');
     el('food-suggestions').innerHTML = known.map(function(f){
       return '<option value="' + escapeHtml(f) + '"></option>';
     }).join('');
-    var draftLower = solidDraftFoods.map(function(f){ return f.toLowerCase(); });
+    var draftLower = list.map(function(f){ return f.toLowerCase(); });
     var recent = known.filter(function(f){ return draftLower.indexOf(f.toLowerCase()) < 0; }).slice(0, 10);
-    el('s-recent').innerHTML = recent.map(function(f){
+    el(ids.recent).innerHTML = recent.map(function(f){
       return '<button type="button" class="chip" data-food="' + escapeHtml(f) + '">' + escapeHtml(f) + '</button>';
     }).join('');
   }
 
   function resetSolidForm(){
     var now = new Date();
-    solidDraftFoods = [];
+    foodForm = 'solid';
+    draftFoods.solid = [];
     el('s-id').value = '';
     el('s-date').value = dateKey(now);
     el('s-time').value = timeValue(now);
@@ -2796,7 +2839,7 @@
     el('s-delete').hidden = true;
     renderLoggedBy('solid', '');
     hideError('s-error');
-    renderFoodHelpers();
+    renderFoodHelpers('solid');
     clearDraft('solid-form');
   }
 
@@ -2814,7 +2857,8 @@
     var s = state.solids.find(function(x){ return x.id === id; });
     if (!s) return false;
     if (!quiet) goTo('solids');
-    solidDraftFoods = (s.foods || []).slice();
+    foodForm = 'solid';
+    draftFoods.solid = (s.foods || []).slice();
     el('s-id').value = s.id;
     el('s-date').value = s.date;
     el('s-time').value = s.time;
@@ -2825,7 +2869,7 @@
     el('s-delete').hidden = false;
     renderLoggedBy('solid', s.createdBy);
     hideError('s-error');
-    renderFoodHelpers();
+    renderFoodHelpers('solid');
     snapshotForm('solid-form');
     if (!quiet) openOverlay('solid-overlay');
     return true;
@@ -2889,13 +2933,16 @@
 
   function renderSolids(){
     renderFoodHistory();
-    var groups = groupByDay(state.solids, function(s){ return atDate(s).getTime(); });
+    // Snacks have their own page and their own count. Foods so far still
+    // covers both, because "when did he last have egg?" does not care whether
+    // it came at the table or in the buggy.
+    var groups = groupByDay(mealsOnly(state.solids), function(s){ return atDate(s).getTime(); });
     renderDayGroups(
       el('solids-log'), groups, solidRowHtml,
       function(items){ return plural(items.length, 'meal'); },
       '<span class="empty-icon">&#129367;</span><p>No solids logged yet.<br>Add the first meal above.</p>'
     );
-    renderFoodHelpers();
+    renderFoodHelpers('solid');
   }
 
   el('s-add-food').addEventListener('click', function(){
@@ -2921,13 +2968,14 @@
     var time = el('s-time').value;
     if (!date){ showError('s-error', 'Pick the date of this meal.', 's-date'); return; }
     if (!time){ showError('s-error', 'Enter the time of this meal.', 's-time'); return; }
-    if (!solidDraftFoods.length){ showError('s-error', 'Add at least one food.', 's-food'); return; }
+    if (!draftFoods.solid.length){ showError('s-error', 'Add at least one food.', 's-food'); return; }
 
     var meal = {
       id: el('s-id').value || uid(),
       date: date,
       time: time,
-      foods: solidDraftFoods.slice(),
+      foods: draftFoods.solid.slice(),
+      kind: 'meal',
       notes: el('s-notes').value.trim(),
       createdBy: loggedBy('solid')
     };
@@ -2951,6 +2999,149 @@
       onConfirm: async function(){
         showToast('Meal deleted');
         closeSolidForm();
+        await commit([{ type: 'delete', collection: 'solids', id: id }]);
+      }
+    });
+  });
+
+  // ======================================================
+  // SNACKS
+  // ======================================================
+  // The same record as a meal - same table, same foods, same history - with a
+  // different label, so that "three meals today" stays three meals however
+  // many rice cakes went with them. Everything that counts meals leaves these
+  // out; Foods so far deliberately does not.
+  function snackRowHtml(s){
+    var title = (s.foods && s.foods.length) ? escapeHtml(s.foods.join(', ')) : 'Snack';
+    return '<div class="entry-row">' +
+      '<div class="entry-main">' +
+        '<span class="entry-range">' + title + '</span>' +
+        metaHtml(s) +
+        (s.notes ? '<span class="entry-notes">' + escapeHtml(s.notes) + '</span>' : '') +
+      '</div>' +
+      '<div class="entry-side">' +
+        '<span class="entry-dur">' + fmtTime(atDate(s)) + '</span>' +
+        '<button class="icon-btn writer-only" data-edit="snack" data-id="' + s.id + '" aria-label="Edit snack" type="button">' + ICON.pencil + '</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderSnacks(){
+    if (!FEATURES.snacks) return;
+    var groups = groupByDay(snacksOnly(state.solids), function(s){ return atDate(s).getTime(); });
+    renderDayGroups(
+      el('snacks-log'), groups, snackRowHtml,
+      function(items){ return plural(items.length, 'snack'); },
+      '<span class="empty-icon">&#127823;</span><p>No snacks logged yet.<br>Add the first one above.</p>'
+    );
+    renderFoodHelpers('snack');
+  }
+
+  function resetSnackForm(){
+    var now = new Date();
+    foodForm = 'snack';
+    draftFoods.snack = [];
+    el('sn-id').value = '';
+    el('sn-date').value = dateKey(now);
+    el('sn-time').value = timeValue(now);
+    el('sn-food').value = '';
+    el('sn-notes').value = '';
+    el('sn-title').textContent = 'Log a snack';
+    el('sn-submit').textContent = 'Add snack';
+    el('sn-delete').hidden = true;
+    renderLoggedBy('snack', '');
+    hideError('sn-error');
+    renderFoodHelpers('snack');
+    clearDraft('snack-form');
+  }
+
+  function openSnackForm(){
+    resetSnackForm();
+    openOverlay('snack-overlay');
+    snapshotForm('snack-form');
+  }
+  function closeSnackForm(){
+    closeOverlay('snack-overlay');
+    resetSnackForm();
+  }
+
+  function editSnack(id, quiet){
+    var s = state.solids.find(function(x){ return x.id === id; });
+    if (!s) return false;
+    if (!quiet) goTo('snacks');
+    foodForm = 'snack';
+    draftFoods.snack = (s.foods || []).slice();
+    el('sn-id').value = s.id;
+    el('sn-date').value = s.date;
+    el('sn-time').value = s.time;
+    el('sn-food').value = '';
+    el('sn-notes').value = s.notes || '';
+    el('sn-title').textContent = 'Edit snack';
+    el('sn-submit').textContent = 'Save';
+    el('sn-delete').hidden = false;
+    renderLoggedBy('snack', s.createdBy);
+    hideError('sn-error');
+    renderFoodHelpers('snack');
+    snapshotForm('snack-form');
+    if (!quiet) openOverlay('snack-overlay');
+    return true;
+  }
+
+  el('snack-add-btn').addEventListener('click', function(){ if (!readOnly) openSnackForm(); });
+  el('sn-cancel').addEventListener('click', closeSnackForm);
+  el('sn-close').addEventListener('click', closeSnackForm);
+  el('snack-overlay').addEventListener('click', function(ev){ if (ev.target === el('snack-overlay')) closeSnackForm(); });
+  el('sn-add-food').addEventListener('click', function(){
+    foodForm = 'snack';
+    if (addDraftFood(el('sn-food').value)){ el('sn-food').value = ''; }
+    el('sn-food').focus();
+  });
+  el('sn-food').addEventListener('keydown', function(ev){
+    if (ev.key === 'Enter'){
+      ev.preventDefault();
+      foodForm = 'snack';
+      if (addDraftFood(el('sn-food').value)){ el('sn-food').value = ''; }
+    }
+  });
+  el('sn-tags').addEventListener('click', function(ev){
+    var btn = ev.target.closest('[data-remove-food]');
+    if (btn){ foodForm = 'snack'; removeDraftFood(Number(btn.getAttribute('data-remove-food'))); }
+  });
+
+  el('snack-form').addEventListener('submit', async function(ev){
+    ev.preventDefault();
+    hideError('sn-error');
+    var date = el('sn-date').value, time = el('sn-time').value;
+    if (!date){ showError('sn-error', 'Pick the date of this snack.', 'sn-date'); return; }
+    if (!time){ showError('sn-error', 'Enter the time of this snack.', 'sn-time'); return; }
+    if (!draftFoods.snack.length){ showError('sn-error', 'Add at least one food.', 'sn-food'); return; }
+
+    var snack = {
+      id: el('sn-id').value || uid(),
+      date: date,
+      time: time,
+      foods: draftFoods.snack.slice(),
+      kind: 'snack',
+      notes: el('sn-notes').value.trim(),
+      createdBy: loggedBy('snack')
+    };
+    showToast(el('sn-id').value ? 'Snack updated' : snack.foods.join(', ') + ' logged');
+    closeSnackForm();
+    await commit([{ type: 'upsert', collection: 'solids', record: snack }]);
+  });
+
+  el('sn-delete').addEventListener('click', function(){
+    var id = el('sn-id').value;
+    if (!id){ closeSnackForm(); return; }
+    var s = state.solids.find(function(x){ return x.id === id; });
+    askConfirm({
+      title: 'Delete this snack?',
+      text: (s ? ((s.foods || []).join(', ') || 'Snack') + ' at ' + fmtTime(atDate(s)) + ' on ' + friendlyDate(s.date) + '. ' : '') +
+        'It will be gone for both of you, and cannot be undone.',
+      confirmLabel: 'Delete',
+      onConfirm: async function(){
+        showToast('Snack deleted');
+        closeSnackForm();
         await commit([{ type: 'delete', collection: 'solids', id: id }]);
       }
     });
@@ -3208,7 +3399,7 @@
       out.push({ kind: 'milk', id: f.id, date: f.date, at: atDate(f), src: f });
     });
     state.solids.forEach(function(s){
-      out.push({ kind: 'solids', id: s.id, date: s.date, at: atDate(s), src: s });
+      out.push({ kind: isSnack(s) ? 'snack' : 'solids', id: s.id, date: s.date, at: atDate(s), src: s });
     });
     if (FEATURES.medicine){
       state.meds.forEach(function(m){
@@ -3232,7 +3423,9 @@
       if (ev.src.gapMin) sub = 'Next from ' + fmtTime(new Date(ev.at.getTime() + ev.src.gapMin * 60000));
       notes = ev.src.notes ? '<span class="entry-notes">' + escapeHtml(ev.src.notes) + '</span>' : '';
     } else {
-      title = (ev.src.foods && ev.src.foods.length) ? escapeHtml(ev.src.foods.join(', ')) : 'Solids';
+      var fell = ev.kind === 'snack' ? 'Snack' : 'Solids';
+      title = (ev.src.foods && ev.src.foods.length) ? escapeHtml(ev.src.foods.join(', ')) : fell;
+      if (ev.kind === 'snack') sub = 'Snack';
       notes = ev.src.notes ? '<span class="entry-notes">' + escapeHtml(ev.src.notes) + '</span>' : '';
     }
     var who = personChip(ev.src);
@@ -3479,6 +3672,7 @@
     else if (open === 'entry-overlay') closeForm();
     else if (open === 'milk-overlay') closeMilkForm();
     else if (open === 'solid-overlay') closeSolidForm();
+    else if (open === 'snack-overlay') closeSnackForm();
     else if (open === 'med-overlay') closeMedForm();
   });
   el('settings-form').addEventListener('submit', async function(ev){
@@ -3509,7 +3703,7 @@
     else if (ml > 0) el('home-milk-sub').textContent = ml + ' ml today across ' + plural(feedCount, 'feed');
     else el('home-milk-sub').textContent = plural(feedCount, 'feed') + ' today';
 
-    var meals = state.solids.filter(function(s){ return s.date === todayKey; });
+    var meals = mealsOnly(state.solids).filter(function(s){ return s.date === todayKey; });
     if (meals.length){
       var latest = meals.slice().sort(function(a, b){ return atDate(b) - atDate(a); })[0];
       var foods = (latest.foods || []).slice(0, 3).join(', ');
@@ -3518,22 +3712,38 @@
       el('home-solids-sub').textContent = 'No solids logged today';
     }
 
+    if (FEATURES.snacks){
+      var snacksToday = snacksOnly(state.solids).filter(function(s){ return s.date === todayKey; });
+      if (snacksToday.length){
+        var lastSnack = snacksToday.slice().sort(function(a, b){ return atDate(b) - atDate(a); })[0];
+        var snackFoods = (lastSnack.foods || []).slice(0, 3).join(', ');
+        el('home-snacks-sub').textContent = plural(snacksToday.length, 'snack') + ' today' +
+          (snackFoods ? ' · ' + snackFoods : '');
+      } else {
+        el('home-snacks-sub').textContent = 'Nothing logged today';
+      }
+    }
+
     var events = allEvents();
     var groups = groupByDay(events, function(ev){ return ev.at.getTime(); });
     el('home-log-count').textContent = events.length ? plural(events.length, 'event') : '';
     renderDayGroups(
       el('home-log'), groups, eventRowHtml,
       function(items){
-        var ms = 0, mlTotal = 0, mealCount = 0;
+        var ms = 0, mlTotal = 0, mealCount = 0, snackCount = 0, doseCount = 0;
         items.forEach(function(ev){
           if (ev.kind === 'sleep') ms += entryEnd(ev.src) - entryStart(ev.src);
           else if (ev.kind === 'milk') mlTotal += Number(ev.src.amountMl || 0);
+          else if (ev.kind === 'snack') snackCount++;
+          else if (ev.kind === 'meds') doseCount++;
           else mealCount++;
         });
         var bits = [];
         if (ms > 0) bits.push(fmtDur(ms));
         if (mlTotal > 0) bits.push(mlTotal + ' ml');
         if (mealCount > 0) bits.push(plural(mealCount, 'meal'));
+        if (snackCount > 0) bits.push(plural(snackCount, 'snack'));
+        if (doseCount > 0) bits.push(plural(doseCount, 'dose'));
         return bits.join(' · ');
       },
       '<span class="empty-icon">&#127772;</span><p>Nothing logged yet.<br>Pick a section above to get started.</p>'
@@ -3733,6 +3943,7 @@
     applyFeatureFlags();
     resetMilkForm();
     resetSolidForm();
+    if (FEATURES.snacks) resetSnackForm();
     if (FEATURES.medicine) resetMedForm();
     restoreView();
     renderAll();

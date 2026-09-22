@@ -25,6 +25,16 @@
  */
 window.CILLY_CHANGELOG = [
   {
+    version: '1.18.0',
+    date: '2026-09-22',
+    title: 'Snacks',
+    notes: [
+      'A Snacks section, alongside Solids: what he had between meals, with the same foods, times and notes.',
+      'Snacks are deliberately left out of the meal count. Three meals and two rice cakes reads as three meals everywhere — on the home screen, in the figures, in the day-by-day table and in the day you open from the calendar, where snacks now have a column and a line of their own.',
+      'Foods so far still covers both, because "when did he last have egg?" does not care whether it came at the table or in the buggy. The spreadsheet and the consultant log say which was which.'
+    ]
+  },
+  {
     version: '1.17.0',
     date: '2026-09-21',
     title: 'Who logged it, and a shorter sleep form',

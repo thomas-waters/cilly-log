@@ -14,12 +14,12 @@
     live: {
       supabaseUrl: 'https://hopvsalkhtgrqbbkioqn.supabase.co',
       supabaseAnonKey: 'sb_publishable_IXpyCf7727af0cpGUfP9_Q_R2VOZSJm',
-      features: { medicine: true, nightMode: true }
+      features: { medicine: true, nightMode: true, snacks: false }
     },
     staging: {
       supabaseUrl: 'https://kmcviicuibnetrbzcctd.supabase.co',
       supabaseAnonKey: 'sb_publishable__E2EZvlD4A73QaPx0GlDyQ_pFWFptyB',
-      features: { medicine: true, nightMode: true }
+      features: { medicine: true, nightMode: true, snacks: false }
     }
   };
 

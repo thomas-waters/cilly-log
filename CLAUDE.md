@@ -81,6 +81,16 @@ It holds real family records: treat the live data with care.
   have display names, since there is nothing to choose between before that.
   Anything new that records something sets `createdBy` from `loggedBy` rather
   than leaving the store to stamp it.
+- **A snack is a solid with a different label.** Same table, same foods, same
+  history: `solids.kind` is `'meal'` or `'snack'`
+  (`supabase/migrations/005_snacks.sql`), and the `snacks` flag stays off on an
+  environment until that column exists there, or a snack would save as a meal.
+  Snacks have their own section and are left out of every meal count -
+  `mealsOnly` and `snacksOnly` in `js/app.js` are how, and anything new that
+  counts meals uses them. Foods so far deliberately covers both. The two forms
+  share one set of food chips through `foodForm` and `draftFoods`, so a
+  re-render must pass its own form to `renderFoodHelpers` rather than letting
+  it guess.
 - Every page has the same shape: a card at the top opens a form in an overlay
   (`openOverlay` / `closeOverlay`), and saving shows a toast and closes it.
   Each overlay lives inside its own view, so only the current view's can be on
