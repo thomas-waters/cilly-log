@@ -154,14 +154,22 @@
   #app[data-view="milk"] .view-milk,
   #app[data-view="meds"] .view-meds,
   #app[data-view="solids"] .view-solids,
+  #app[data-view="snacks"] .view-snacks,
   #app[data-view="summary"] .view-summary,
   #app[data-view="report"] .view-report{ display:flex; }
   body[data-view="sleep"]{ background:var(--bg-sleep); }
   body[data-view="milk"]{ background:var(--bg-milk); }
   body[data-view="solids"]{ background:var(--bg-solids); }
+  body[data-view="snacks"]{ background:var(--bg-solids); }
   body[data-view="meds"]{ background:var(--bg-meds); }
   .view-milk{ --accent:var(--milk); --accent-soft:var(--milk-soft); --accent-ink:var(--milk-ink); }
   .view-solids{ --accent:var(--solid); --accent-soft:var(--solid-soft); --accent-ink:var(--solid-ink); }
+  /* Snacks are food, so they keep the solids colour rather than inventing one:
+     a sixth accent would say they are a different kind of thing. */
+  .view-snacks{ --accent:var(--solid); --accent-soft:var(--solid-soft); --accent-ink:var(--solid-ink); }
+  .event-icon[data-type="snack"],
+  .nav-icon[data-type="snack"],
+  .nav-icon[data-type="snacks"]{ color:var(--solid); background:var(--solid-soft); }
   .view-meds{ --accent:var(--med); --accent-soft:var(--med-soft); --accent-ink:var(--med-ink); }
 
   /* Waiting to sync is not a warning: nothing is lost and there is nothing to

@@ -129,10 +129,14 @@
     }
     function rowToSolid(r){
       return { id: r.id, date: r.date, time: r.time, foods: Array.isArray(r.foods) ? r.foods : [],
+        // Rows written before snacks existed, and by any build without the
+        // column, are meals - which is what they were.
+        kind: r.kind === 'snack' ? 'snack' : 'meal',
         notes: r.notes || '', createdBy: r.created_by || '' };
     }
     function solidToRow(s){
       return { id: s.id, date: s.date, time: s.time, foods: s.foods || [],
+        kind: s.kind === 'snack' ? 'snack' : 'meal',
         notes: s.notes || '', created_by: s.createdBy || null };
     }
     function rowToMed(r){

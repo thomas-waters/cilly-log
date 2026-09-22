@@ -35,6 +35,7 @@ create table if not exists public.solids (
   time       text not null,
   foods      jsonb not null default '[]'::jsonb,
   notes      text not null default '',
+  kind       text not null default 'meal',   -- 'meal' or 'snack'
   created_by text,
   updated_at timestamptz not null default now()
 );

@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#5B54D6">
   <title>Cilly Log</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
-  <link rel="stylesheet" href="css/app.css?v=20260921-2250">
+  <link rel="stylesheet" href="css/app.css?v=20260922-2121">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -110,6 +110,16 @@
         <span class="nav-text">
           <span class="nav-title">Solids</span>
           <span class="nav-sub" id="home-solids-sub">No solids logged today</span>
+        </span>
+        <span class="nav-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M9 5l7 7-7 7"/></svg></span>
+      </button>
+      <button class="nav-tile feature-snacks" type="button" data-nav="snacks" hidden>
+        <span class="nav-icon" data-type="snacks">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M12 8.5c-1-1.4-2.5-2-4-1.6C6 7.4 4.6 9.3 4.6 12c0 3.4 2.2 7 4.3 7 .9 0 1.6-.3 2.2-.6.6-.3 1.2-.3 1.8 0 .6.3 1.3.6 2.2.6 2.1 0 4.3-3.6 4.3-7 0-2.7-1.4-4.6-3.4-5.1-1.5-.4-3 .2-4 1.6z"/><path d="M12 8.5V5.8"/><path d="M12 5.8c1.2 0 2.2-1 2.2-2.3-1.2 0-2.2 1-2.2 2.3z"/></svg>
+        </span>
+        <span class="nav-text">
+          <span class="nav-title">Snacks</span>
+          <span class="nav-sub" id="home-snacks-sub">Nothing logged today</span>
         </span>
         <span class="nav-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M9 5l7 7-7 7"/></svg></span>
       </button>
@@ -579,6 +589,99 @@
     <section class="log" id="solids-log"></section>
   </section>
 
+  <!-- ================= SNACKS ================= -->
+  <!-- The same record as a meal with a different label on it, kept apart so a
+       snack never lands in the daily meal count. -->
+  <section class="view view-snacks" aria-label="Snacks">
+    <header class="page-head">
+      <button class="head-btn" type="button" data-nav="home" aria-label="Back to home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <span class="nav-icon head-icon" data-type="snacks">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M12 8.5c-1-1.4-2.5-2-4-1.6C6 7.4 4.6 9.3 4.6 12c0 3.4 2.2 7 4.3 7 .9 0 1.6-.3 2.2-.6.6-.3 1.2-.3 1.8 0 .6.3 1.3.6 2.2.6 2.1 0 4.3-3.6 4.3-7 0-2.7-1.4-4.6-3.4-5.1-1.5-.4-3 .2-4 1.6z"/><path d="M12 8.5V5.8"/><path d="M12 5.8c1.2 0 2.2-1 2.2-2.3-1.2 0-2.2 1-2.2 2.3z"/></svg>
+      </span>
+      <div class="head-text">
+        <h1>Snacks</h1>
+        <p class="tagline">Between meals, and not counted as one.</p>
+      </div>
+      <button class="head-btn" type="button" data-refresh aria-label="Refresh">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>
+      </button>
+    </header>
+
+    <section class="status-card action-card writer-only">
+      <button class="status-btn" id="snack-add-btn" type="button">
+        <span class="status-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M12 8.5c-1-1.4-2.5-2-4-1.6C6 7.4 4.6 9.3 4.6 12c0 3.4 2.2 7 4.3 7 .9 0 1.6-.3 2.2-.6.6-.3 1.2-.3 1.8 0 .6.3 1.3.6 2.2.6 2.1 0 4.3-3.6 4.3-7 0-2.7-1.4-4.6-3.4-5.1-1.5-.4-3 .2-4 1.6z"/><path d="M12 8.5V5.8"/><path d="M12 5.8c1.2 0 2.2-1 2.2-2.3-1.2 0-2.2 1-2.2 2.3z"/></svg>
+        </span>
+        <span class="status-text">
+          <span class="status-label">Log a snack</span>
+          <span class="status-sub" id="snack-add-sub">Tap to add what they had</span>
+        </span>
+        <span class="nav-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M9 5l7 7-7 7"/></svg></span>
+      </button>
+    </section>
+
+    <div class="overlay writer-only" id="snack-overlay" hidden>
+    <section class="panel overlay-panel" role="dialog" aria-modal="true" aria-labelledby="sn-title">
+      <div class="overlay-head">
+        <h2 id="sn-title">Log a snack</h2>
+        <button type="button" class="head-btn" id="sn-close" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <form id="snack-form">
+        <input type="hidden" id="sn-id" value="">
+        <div class="row">
+          <div class="field">
+            <label for="sn-date">Date</label>
+            <input type="date" id="sn-date">
+          </div>
+          <div class="field">
+            <label for="sn-time">Time</label>
+            <input type="time" id="sn-time">
+          </div>
+        </div>
+        <div class="chips" data-target="sn-time">
+          <button type="button" class="chip" data-minutes="0">Now</button>
+          <button type="button" class="chip" data-minutes="5">5m ago</button>
+          <button type="button" class="chip" data-minutes="10">10m ago</button>
+          <button type="button" class="chip" data-minutes="20">20m ago</button>
+          <button type="button" class="chip" data-minutes="30">30m ago</button>
+        </div>
+        <div class="field">
+          <label for="sn-food">Foods</label>
+          <div class="tags" id="sn-tags"></div>
+          <div class="row">
+            <input type="text" id="sn-food" list="food-suggestions" autocomplete="off" placeholder="Rice cake, banana, cheese...">
+            <button type="button" class="btn small" id="sn-add-food">Add</button>
+          </div>
+          <div class="chips" id="sn-recent"></div>
+        </div>
+        <div class="field">
+          <label for="sn-notes">Notes</label>
+          <textarea id="sn-notes" rows="2" placeholder="In the buggy, shared with his cousin..."></textarea>
+        </div>
+        <div class="field" id="snack-by" hidden>
+          <span class="field-label" id="snack-by-label">Logged by</span>
+          <div class="unit-toggle basis-toggle by-group" id="snack-by-group" data-form="snack" role="group" aria-labelledby="snack-by-label"></div>
+        </div>
+        <p class="form-error" id="sn-error" hidden></p>
+        <div class="form-actions">
+          <button type="button" class="btn danger" id="sn-delete" hidden>Delete</button>
+          <button type="button" class="btn ghost" id="sn-cancel">Cancel</button>
+          <button type="submit" class="btn primary" id="sn-submit">Add snack</button>
+        </div>
+      </form>
+    </section>
+    </div>
+
+    <div class="log-toolbar">
+      <h2>Snack log</h2>
+    </div>
+    <section class="log" id="snacks-log"></section>
+  </section>
+
   <!-- ================= MEDICINE ================= -->
   <section class="view view-meds" aria-label="Medicine">
     <header class="page-head">
@@ -1015,11 +1118,11 @@
 
 <div class="toast" id="toast" hidden></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/config.js?v=20260921-2250"></script>
-<script src="js/store.js?v=20260921-2250"></script>
-<script src="js/docx.js?v=20260921-2250"></script>
-<script src="js/changelog.js?v=20260921-2250"></script>
-<script src="js/sleep-model.js?v=20260921-2250"></script>
-<script src="js/app.js?v=20260921-2250"></script>
+<script src="js/config.js?v=20260922-2121"></script>
+<script src="js/store.js?v=20260922-2121"></script>
+<script src="js/docx.js?v=20260922-2121"></script>
+<script src="js/changelog.js?v=20260922-2121"></script>
+<script src="js/sleep-model.js?v=20260922-2121"></script>
+<script src="js/app.js?v=20260922-2121"></script>
 </body>
 </html>
