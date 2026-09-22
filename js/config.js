@@ -19,7 +19,7 @@
     staging: {
       supabaseUrl: 'https://kmcviicuibnetrbzcctd.supabase.co',
       supabaseAnonKey: 'sb_publishable__E2EZvlD4A73QaPx0GlDyQ_pFWFptyB',
-      features: { medicine: true, nightMode: true, snacks: false }
+      features: { medicine: true, nightMode: true, snacks: true }
     }
   };
 
